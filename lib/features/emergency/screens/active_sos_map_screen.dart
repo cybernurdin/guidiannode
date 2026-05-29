@@ -4,6 +4,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/radii.dart';
 import '../../../core/theme/spacing.dart';
+import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/cards.dart';
 import '../../../core/widgets/placeholders.dart';
 import '../../../core/widgets/status_widgets.dart';
@@ -22,6 +23,7 @@ class ActiveSosMapScreen extends StatefulWidget {
 class _ActiveSosMapScreenState extends State<ActiveSosMapScreen> {
   final EmergencyCoordinator _coordinator = EmergencyCoordinator.instance;
   late final Future<void> _mapsLoaderFuture;
+  bool _isResolving = false;
 
   @override
   void initState() {
@@ -39,6 +41,60 @@ class _ActiveSosMapScreenState extends State<ActiveSosMapScreen> {
   void _handleCoordinatorUpdated() {
     if (mounted) {
       setState(() {});
+    }
+  }
+
+  Future<void> _confirmResolveAlert() async {
+    final shouldResolve = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('End SOS broadcast?'),
+        content: const Text(
+          'Only end the SOS when you are safe or the situation has been handled.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Keep live'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('End SOS'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldResolve != true || !mounted) {
+      return;
+    }
+
+    setState(() => _isResolving = true);
+
+    try {
+      await _coordinator.resolveActiveSos();
+
+      if (!mounted) {
+        return;
+      }
+
+      StatusSnackbar.show(
+        context,
+        message: 'SOS broadcast ended. Your emergency session is closed.',
+        tone: StatusTone.success,
+      );
+      Navigator.of(context).pop();
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() => _isResolving = false);
+      StatusSnackbar.show(
+        context,
+        message: error.toString().replaceFirst('Exception: ', ''),
+        tone: StatusTone.error,
+      );
     }
   }
 
@@ -158,6 +214,13 @@ class _ActiveSosMapScreenState extends State<ActiveSosMapScreen> {
                     );
                   },
                 ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              DangerButton(
+                text: 'End SOS broadcast',
+                icon: Icons.check_circle_outline_rounded,
+                isLoading: _isResolving,
+                onPressed: _isResolving ? null : _confirmResolveAlert,
               ),
             ],
           ),

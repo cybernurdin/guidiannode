@@ -42,4 +42,11 @@ router.post(
   alertController.updateLiveAlertLocationHandler
 );
 
+router.post(
+  '/:alertId/resolve',
+  verifySession,
+  validateRequest(alertIdParamSchema, 'params'),
+  alertController.resolveAlertHandler
+);
+
 module.exports = router;

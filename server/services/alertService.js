@@ -466,11 +466,59 @@ const getResponderFollowDetails = async ({
   };
 };
 
+const resolveAlert = async ({ alertId, userId }) => {
+  const alert = await getAlertById(alertId);
+
+  if (!alert) {
+    throw new AppError('Alert could not be found.', 404, 'alert_not_found');
+  }
+
+  if (alert.user_id !== userId) {
+    throw new AppError(
+      'You are not allowed to resolve this alert.',
+      403,
+      'alert_resolve_forbidden'
+    );
+  }
+
+  if (alert.status === 'resolved') {
+    const victim = await userService.getUserById(alert.user_id);
+    const liveLocation = await getLatestLiveLocation(alert.id, alert.user_id);
+    return normalizeAlertPayload(alert, liveLocation, victim);
+  }
+
+  const nowIso = new Date().toISOString();
+
+  await updateAlertById(alertId, {
+    status: 'resolved',
+    resolved_at: nowIso,
+    updated_at: nowIso,
+  });
+
+  const resolvedAlert = await getAlertById(alertId);
+  const victim = await userService.getUserById(userId);
+  const liveLocation = await getLatestLiveLocation(alertId, userId);
+
+  await runBestEffort('Resolve incident log', () =>
+    realtimeService.createIncidentLog({
+      alertId,
+      action: 'sos_resolved',
+      performedBy: userId,
+      metadata: {
+        resolved_at: nowIso,
+      },
+    })
+  );
+
+  return normalizeAlertPayload(resolvedAlert, liveLocation, victim);
+};
+
 module.exports = {
   createSosAlert,
   getAlertById,
   getLatestLiveLocation,
   getNearbyActiveAlerts,
   getResponderFollowDetails,
+  resolveAlert,
   upsertLiveAlertLocation,
 };

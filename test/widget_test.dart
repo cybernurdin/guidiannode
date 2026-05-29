@@ -14,9 +14,12 @@ void main() {
     await tester.pumpWidget(const GuardianNodeApp());
 
     expect(find.text('GuardianNode'), findsOneWidget);
-    expect(find.text('Preparing your safety network'), findsOneWidget);
+    expect(
+      find.text('Real-time protection & emergency routing'),
+      findsOneWidget,
+    );
 
-    await tester.pump(const Duration(milliseconds: 1200));
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1500));
+    await tester.pumpAndSettle();
   });
 }

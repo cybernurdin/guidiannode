@@ -59,6 +59,14 @@ class EmergencyApiService {
     );
   }
 
+  static Future<EmergencyAlert> resolveAlert({required String alertId}) async {
+    final response = await _request('POST', '/api/alerts/$alertId/resolve');
+
+    return EmergencyAlert.fromJson(
+      Map<String, dynamic>.from(response['data'] as Map? ?? const {}),
+    );
+  }
+
   static Future<List<EmergencyAlert>> fetchNearbyAlerts({
     required PositionSnapshot center,
     int radiusMeters = 3000,

@@ -194,6 +194,28 @@ class EmergencyCoordinator extends ChangeNotifier {
     }
   }
 
+  Future<EmergencyAlert?> resolveActiveSos() async {
+    final alert = _activeAlert;
+
+    if (alert == null) {
+      return null;
+    }
+
+    final resolvedAlert = await EmergencyApiService.resolveAlert(
+      alertId: alert.id,
+    );
+    _activeAlert = null;
+    _lastAlertSyncedPosition = null;
+    _lastAlertSyncAt = null;
+
+    if (!_locationSharingEnabled) {
+      await _stopPositionStream();
+    }
+
+    notifyListeners();
+    return resolvedAlert;
+  }
+
   Future<void> _ensurePositionStream() async {
     if (_positionSubscription != null) {
       return;

@@ -4,13 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../theme/colors.dart';
-import '../theme/motion.dart';
 import '../theme/radii.dart';
 import '../theme/spacing.dart';
 
 enum AppButtonTone { primary, secondary, outline, danger }
 
-class AppButton extends StatelessWidget {
+class AppButton extends StatefulWidget {
   const AppButton({
     super.key,
     required this.label,
@@ -29,61 +28,203 @@ class AppButton extends StatelessWidget {
   final bool expand;
 
   @override
+  State<AppButton> createState() => _AppButtonState();
+}
+
+class _AppButtonState extends State<AppButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scaleAnimation;
+  bool _isPressed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 80),
+    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.96,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _handleTapDown(TapDownDetails details) {
+    if (widget.onPressed != null && !widget.isLoading) {
+      _controller.forward();
+      setState(() => _isPressed = true);
+    }
+  }
+
+  void _handleTapUp(TapUpDetails details) {
+    if (widget.onPressed != null && !widget.isLoading) {
+      _controller.reverse();
+      setState(() => _isPressed = false);
+      HapticFeedback.lightImpact();
+      widget.onPressed!();
+    }
+  }
+
+  void _handleTapCancel() {
+    if (widget.onPressed != null && !widget.isLoading) {
+      _controller.reverse();
+      setState(() => _isPressed = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final child = isLoading
-        ? const SizedBox(
+    final isEnabled = widget.onPressed != null && !widget.isLoading;
+
+    final TextStyle textStyle = switch (widget.tone) {
+      AppButtonTone.primary => Theme.of(context).textTheme.labelLarge!.copyWith(
+        color: AppColors.cleanWhite,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.2,
+      ),
+      AppButtonTone.secondary =>
+        Theme.of(context).textTheme.labelLarge!.copyWith(
+          color: AppColors.trustBlueDark,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.1,
+        ),
+      AppButtonTone.outline => Theme.of(context).textTheme.labelLarge!.copyWith(
+        color: AppColors.trustBlue,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.1,
+      ),
+      AppButtonTone.danger => Theme.of(context).textTheme.labelLarge!.copyWith(
+        color: AppColors.cleanWhite,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.2,
+      ),
+    };
+
+    final decoration = switch (widget.tone) {
+      AppButtonTone.primary => BoxDecoration(
+        borderRadius: AppRadii.button,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isEnabled
+              ? [AppColors.trustBlue, const Color(0xFF1D4ED8)]
+              : [AppColors.disabled, AppColors.disabled.withValues(alpha: 0.8)],
+        ),
+        boxShadow: isEnabled && !_isPressed
+            ? [
+                BoxShadow(
+                  color: AppColors.trustBlue.withValues(alpha: 0.24),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ]
+            : null,
+      ),
+      AppButtonTone.secondary => BoxDecoration(
+        borderRadius: AppRadii.button,
+        color: isEnabled
+            ? AppColors.trustBlueSurface
+            : AppColors.disabled.withValues(alpha: 0.15),
+      ),
+      AppButtonTone.outline => BoxDecoration(
+        borderRadius: AppRadii.button,
+        color: Colors.transparent,
+        border: Border.all(
+          color: isEnabled ? AppColors.border : AppColors.disabled,
+          width: 1.5,
+        ),
+      ),
+      AppButtonTone.danger => BoxDecoration(
+        borderRadius: AppRadii.button,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isEnabled
+              ? [AppColors.error, const Color(0xFFDC2626)]
+              : [AppColors.disabled, AppColors.disabled.withValues(alpha: 0.8)],
+        ),
+        boxShadow: isEnabled && !_isPressed
+            ? [
+                BoxShadow(
+                  color: AppColors.error.withValues(alpha: 0.2),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ]
+            : null,
+      ),
+    };
+
+    final child = widget.isLoading
+        ? SizedBox(
             width: 22,
             height: 22,
-            child: CircularProgressIndicator(strokeWidth: 2.5),
+            child: CircularProgressIndicator(
+              strokeWidth: 2.5,
+              color:
+                  widget.tone == AppButtonTone.primary ||
+                      widget.tone == AppButtonTone.danger
+                  ? AppColors.cleanWhite
+                  : AppColors.trustBlue,
+            ),
           )
         : Row(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              if (icon != null) ...[
-                Icon(icon, size: 18),
+              if (widget.icon != null) ...[
+                Icon(
+                  widget.icon,
+                  size: 18,
+                  color:
+                      widget.tone == AppButtonTone.primary ||
+                          widget.tone == AppButtonTone.danger
+                      ? AppColors.cleanWhite
+                      : widget.tone == AppButtonTone.secondary
+                      ? AppColors.trustBlueDark
+                      : AppColors.trustBlue,
+                ),
                 const SizedBox(width: AppSpacing.xs),
               ],
-              Flexible(child: Text(label, textAlign: TextAlign.center)),
+              Flexible(
+                child: Text(
+                  widget.label,
+                  textAlign: TextAlign.center,
+                  style: textStyle,
+                ),
+              ),
             ],
           );
 
-    final button = switch (tone) {
-      AppButtonTone.primary => ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
-        child: child,
-      ),
-      AppButtonTone.secondary => FilledButton.tonal(
-        onPressed: isLoading ? null : onPressed,
-        style: FilledButton.styleFrom(
-          foregroundColor: AppColors.trustBlueDark,
-          backgroundColor: AppColors.trustBlueSurface,
-          minimumSize: const Size(double.infinity, 56),
+    Widget button = ScaleTransition(
+      scale: _scaleAnimation,
+      child: GestureDetector(
+        onTapDown: _handleTapDown,
+        onTapUp: _handleTapUp,
+        onTapCancel: _handleTapCancel,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          alignment: Alignment.center,
+          height: 56,
+          decoration: decoration,
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg,
             vertical: AppSpacing.sm,
           ),
-          shape: const RoundedRectangleBorder(borderRadius: AppRadii.button),
-          textStyle: Theme.of(context).textTheme.titleSmall,
+          child: child,
         ),
-        child: child,
       ),
-      AppButtonTone.outline => OutlinedButton(
-        onPressed: isLoading ? null : onPressed,
-        child: child,
-      ),
-      AppButtonTone.danger => ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.error,
-          foregroundColor: AppColors.cleanWhite,
-        ),
-        child: child,
-      ),
-    };
+    );
 
-    if (!expand) {
-      return button;
+    if (!widget.expand) {
+      return IntrinsicWidth(child: button);
     }
 
     return SizedBox(width: double.infinity, child: button);
@@ -239,12 +380,11 @@ class _SosButtonState extends State<SosButton>
   @override
   void initState() {
     super.initState();
+    // Continuous 2.4-second linear cycle for the radar wave expansion
     _controller = AnimationController(
       vsync: this,
-      duration: AppMotion.slow,
-      lowerBound: 0.95,
-      upperBound: 1.02,
-    )..repeat(reverse: true);
+      duration: const Duration(milliseconds: 2400),
+    )..repeat();
   }
 
   @override
@@ -257,7 +397,7 @@ class _SosButtonState extends State<SosButton>
   Widget build(BuildContext context) {
     final isSafe = widget.isSafeState;
     final accentColor = isSafe ? AppColors.safetyGreen : AppColors.error;
-    final ringColor = accentColor.withValues(alpha: 0.16);
+    final ringColor = accentColor.withValues(alpha: 0.2);
     final label = widget.label ?? (isSafe ? 'Protected' : 'SOS');
     final subtitle =
         widget.subtitle ??
@@ -271,45 +411,76 @@ class _SosButtonState extends State<SosButton>
       child: AnimatedBuilder(
         animation: _controller,
         builder: (context, child) {
-          final scale = widget.isBusy ? 1.0 : _controller.value;
-          return Transform.scale(
-            scale: scale,
-            child: GestureDetector(
-              onTap: widget.isBusy
-                  ? null
-                  : () {
-                      HapticFeedback.heavyImpact();
-                      widget.onPressed();
-                    },
-              child: SizedBox(
-                width: 252,
-                height: 252,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    _PulseRing(size: 252, color: ringColor),
-                    _PulseRing(
-                      size: 214,
-                      color: ringColor.withValues(alpha: 0.26),
+          final value = _controller.value;
+
+          // Smooth physical core breathing scale (sine wave)
+          final coreScale = widget.isBusy
+              ? 1.0
+              : 1.0 + 0.035 * math.sin(value * 2 * math.pi);
+
+          return GestureDetector(
+            onTap: widget.isBusy
+                ? null
+                : () {
+                    HapticFeedback.heavyImpact();
+                    widget.onPressed();
+                  },
+            child: SizedBox(
+              width: 260,
+              height: 260,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Outer Radar Pulse 1 (starts at size 180, expands to 260, fades out)
+                  _PulseRing(
+                    size: 180 + (80 * value),
+                    color: ringColor.withValues(alpha: 0.15 * (1.0 - value)),
+                    strokeWidth: 1.5,
+                  ),
+                  // Middle Radar Pulse 2 (offset by 0.5 phase)
+                  _PulseRing(
+                    size: 180 + (80 * ((value + 0.5) % 1.0)),
+                    color: ringColor.withValues(
+                      alpha: 0.25 * (1.0 - ((value + 0.5) % 1.0)),
                     ),
-                    DecoratedBox(
+                    strokeWidth: 2.0,
+                  ),
+                  // Inner Halo Glow (constant breathing scale)
+                  _PulseRing(
+                    size: 176 + (14 * math.sin(value * 2 * math.pi).abs()),
+                    color: ringColor.withValues(alpha: 0.28),
+                    strokeWidth: 2.5,
+                  ),
+
+                  // Central Interactive Core
+                  Transform.scale(
+                    scale: coreScale,
+                    child: DecoratedBox(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: RadialGradient(
+                          center: Alignment.topLeft,
+                          radius: 0.85,
                           colors: [
-                            accentColor.withValues(alpha: 0.94),
-                            accentColor,
+                            accentColor.withValues(alpha: 0.98),
+                            accentColor.darken(0.12),
                           ],
                         ),
                         border: Border.all(
-                          color: AppColors.cleanWhite.withValues(alpha: 0.28),
+                          color: AppColors.cleanWhite.withValues(alpha: 0.35),
+                          width: 1.5,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: accentColor.withValues(alpha: 0.28),
-                            blurRadius: 28,
-                            spreadRadius: 6,
-                            offset: const Offset(0, 12),
+                            color: accentColor.withValues(
+                              alpha:
+                                  0.32 +
+                                  0.08 * math.sin(value * 2 * math.pi).abs(),
+                            ),
+                            blurRadius:
+                                28 + 8 * math.sin(value * 2 * math.pi).abs(),
+                            spreadRadius: 2,
+                            offset: const Offset(0, 10),
                           ),
                         ],
                       ),
@@ -320,7 +491,7 @@ class _SosButtonState extends State<SosButton>
                           child: widget.isBusy
                               ? const CircularProgressIndicator(
                                   color: AppColors.cleanWhite,
-                                  strokeWidth: 3,
+                                  strokeWidth: 3.2,
                                 )
                               : Column(
                                   mainAxisSize: MainAxisSize.min,
@@ -332,10 +503,12 @@ class _SosButtonState extends State<SosButton>
                                           .displayLarge
                                           ?.copyWith(
                                             color: AppColors.cleanWhite,
-                                            fontSize: 40,
+                                            fontSize: 38,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 1.2,
                                           ),
                                     ),
-                                    const SizedBox(height: AppSpacing.xs),
+                                    const SizedBox(height: AppSpacing.xxs),
                                     Padding(
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: AppSpacing.md,
@@ -350,7 +523,9 @@ class _SosButtonState extends State<SosButton>
                                             .bodySmall
                                             ?.copyWith(
                                               color: AppColors.cleanWhite
-                                                  .withValues(alpha: 0.92),
+                                                  .withValues(alpha: 0.88),
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 11,
                                             ),
                                       ),
                                     ),
@@ -359,8 +534,8 @@ class _SosButtonState extends State<SosButton>
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           );
@@ -371,19 +546,33 @@ class _SosButtonState extends State<SosButton>
 }
 
 class _PulseRing extends StatelessWidget {
-  const _PulseRing({required this.size, required this.color});
+  const _PulseRing({
+    required this.size,
+    required this.color,
+    required this.strokeWidth,
+  });
 
   final double size;
   final Color color;
+  final double strokeWidth;
 
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: color, width: math.max(1, size * 0.015)),
+        border: Border.all(color: color, width: strokeWidth),
       ),
       child: SizedBox.square(dimension: size),
     );
+  }
+}
+
+extension ColorDarken on Color {
+  Color darken([double amount = .1]) {
+    assert(amount >= 0 && amount <= 1);
+    final hsl = HSLColor.fromColor(this);
+    final hslDark = hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0));
+    return hslDark.toColor();
   }
 }

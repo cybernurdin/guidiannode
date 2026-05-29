@@ -1,6 +1,6 @@
-# guidiannode
+# GuardianNode
 
-A new Flutter project.
+GuardianNode is a Flutter and Node.js emergency alert app for Bamenda, with OTP authentication, realtime location sharing, nearby SOS alerts, responder route guidance, and Supabase-backed live updates.
 
 ## Local auth backend
 
@@ -17,6 +17,13 @@ Health check:
 
 ```bash
 http://127.0.0.1:3000/health
+```
+
+Readiness check:
+
+```bash
+cd server
+npm run check:env
 ```
 
 ## Running the Flutter app against local auth
@@ -40,16 +47,6 @@ flutter run --dart-define=API_AUTH_BASE_URL=http://127.0.0.1:3000/api/auth
 flutter run --dart-define=API_AUTH_BASE_URL=http://<your-computer-ip>:3000/api/auth
 ```
 
-## Getting Started
+## Deployment
 
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Deployment steps, environment variables, signing notes, and production build commands are in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).

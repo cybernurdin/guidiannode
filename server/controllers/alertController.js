@@ -101,9 +101,28 @@ const getResponderFollowDetailsHandler = async (req, res) => {
   }
 };
 
+const resolveAlertHandler = async (req, res) => {
+  try {
+    const params = req.validated?.params ?? req.params;
+    const alert = await alertService.resolveAlert({
+      alertId: params.alertId,
+      userId: req.user.id,
+    });
+
+    return sendSuccess(res, {
+      statusCode: 200,
+      message: 'SOS alert resolved successfully.',
+      data: alert,
+    });
+  } catch (error) {
+    return sendError(res, error, { label: 'Resolve Alert Error' });
+  }
+};
+
 module.exports = {
   createSosAlertHandler,
   getNearbyAlertsHandler,
   getResponderFollowDetailsHandler,
+  resolveAlertHandler,
   updateLiveAlertLocationHandler,
 };

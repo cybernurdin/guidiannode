@@ -84,7 +84,7 @@ class AppConfig {
 
   static const bool showDebugOtpHelper = bool.fromEnvironment(
     'SHOW_DEBUG_OTP_HELPER',
-    defaultValue: true,
+    defaultValue: kDebugMode,
   );
 
   static String _normalizeBaseUrl(String value) =>

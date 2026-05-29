@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/radii.dart';
@@ -51,16 +52,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void _continue() {
     if (_currentPage == _slides.length - 1) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(
-          builder: (_) => const PermissionsEducationScreen(),
+        PageRouteBuilder<void>(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              const PermissionsEducationScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 350),
         ),
       );
       return;
     }
 
     _controller.nextPage(
-      duration: const Duration(milliseconds: 260),
-      curve: Curves.easeOut,
+      duration: const Duration(milliseconds: 380),
+      curve: Curves.easeOutBack,
     );
   }
 
@@ -79,18 +85,35 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               Row(
                 children: [
                   const StatusBadge(
-                    label: 'Bamenda emergency network',
+                    label: 'GuardianNode Bamenda',
                     tone: StatusTone.info,
                   ),
                   const Spacer(),
                   TextButton(
                     onPressed: () {
                       Navigator.of(context).pushReplacement(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const PermissionsEducationScreen(),
+                        PageRouteBuilder<void>(
+                          pageBuilder:
+                              (context, animation, secondaryAnimation) =>
+                                  const PermissionsEducationScreen(),
+                          transitionsBuilder:
+                              (context, animation, secondaryAnimation, child) {
+                                return FadeTransition(
+                                  opacity: animation,
+                                  child: child,
+                                );
+                              },
+                          transitionDuration: const Duration(milliseconds: 350),
                         ),
                       );
                     },
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.textSecondary,
+                      textStyle: GoogleFonts.inter(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13.5,
+                      ),
+                    ),
                     child: const Text('Skip'),
                   ),
                 ],
@@ -104,63 +127,129 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       setState(() => _currentPage = index),
                   itemBuilder: (context, index) {
                     final page = _slides[index];
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(AppSpacing.xl),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: AppColors.emergencyGradient,
-                              ),
-                              borderRadius: AppRadii.card,
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: 72,
-                                  height: 72,
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppSpacing.xs,
+                      ),
+                      child: ClipRRect(
+                        borderRadius: AppRadii.card,
+                        child: Container(
+                          width: double.infinity,
+                          decoration: const BoxDecoration(
+                            color: Color(
+                              0xFF0F172A,
+                            ), // Premium obsidian slate dark background
+                          ),
+                          child: Stack(
+                            children: [
+                              // Layered mesh gradient blobs inside the pane
+                              Positioned(
+                                top: -80,
+                                right: -80,
+                                child: Container(
+                                  width: 240,
+                                  height: 240,
                                   decoration: BoxDecoration(
-                                    color: AppColors.cleanWhite.withValues(
-                                      alpha: 0.12,
+                                    shape: BoxShape.circle,
+                                    gradient: RadialGradient(
+                                      colors: [
+                                        page.color.withValues(alpha: 0.35),
+                                        Colors.transparent,
+                                      ],
                                     ),
-                                    borderRadius: AppRadii.card,
-                                  ),
-                                  child: Icon(
-                                    page.icon,
-                                    size: 34,
-                                    color: AppColors.cleanWhite,
                                   ),
                                 ),
-                                const Spacer(),
-                                Text(
-                                  page.title,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .displayMedium
-                                      ?.copyWith(color: AppColors.cleanWhite),
-                                ),
-                                const SizedBox(height: AppSpacing.md),
-                                Text(
-                                  page.message,
-                                  style: Theme.of(context).textTheme.bodyLarge
-                                      ?.copyWith(
-                                        color: AppColors.cleanWhite.withValues(
-                                          alpha: 0.92,
+                              ),
+                              Positioned(
+                                bottom: -80,
+                                left: -40,
+                                child: Container(
+                                  width: 220,
+                                  height: 220,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: RadialGradient(
+                                      colors: [
+                                        AppColors.trustBlue.withValues(
+                                          alpha: 0.22,
                                         ),
-                                        height: 1.45,
-                                      ),
+                                        Colors.transparent,
+                                      ],
+                                    ),
+                                  ),
                                 ),
-                              ],
-                            ),
+                              ),
+
+                              // Polished glass boundary line
+                              Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: AppRadii.card,
+                                  border: Border.all(
+                                    color: AppColors.cleanWhite.withValues(
+                                      alpha: 0.14,
+                                    ),
+                                    width: 1.5,
+                                  ),
+                                ),
+                              ),
+
+                              // Content Layer
+                              Padding(
+                                padding: const EdgeInsets.all(AppSpacing.xl),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      width: 68,
+                                      height: 68,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.cleanWhite.withValues(
+                                          alpha: 0.08,
+                                        ),
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: AppColors.cleanWhite
+                                              .withValues(alpha: 0.22),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                      child: Icon(
+                                        page.icon,
+                                        size: 32,
+                                        color: AppColors.cleanWhite,
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    Text(
+                                      page.title,
+                                      style: GoogleFonts.outfit(
+                                        color: AppColors.cleanWhite,
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.w800,
+                                        height: 1.15,
+                                        letterSpacing: -0.4,
+                                      ),
+                                    ),
+                                    const SizedBox(height: AppSpacing.md),
+                                    Text(
+                                      page.message,
+                                      style: GoogleFonts.inter(
+                                        color: AppColors.cleanWhite.withValues(
+                                          alpha: 0.85,
+                                        ),
+                                        fontSize: 14.5,
+                                        height: 1.45,
+                                        fontWeight: FontWeight.w500,
+                                        letterSpacing: 0.08,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
+                      ),
                     );
                   },
                 ),
@@ -168,21 +257,31 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               const SizedBox(height: AppSpacing.xl),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  _slides.length,
-                  (index) => AnimatedContainer(
-                    duration: const Duration(milliseconds: 220),
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    width: _currentPage == index ? 26 : 8,
+                children: List.generate(_slides.length, (index) {
+                  final isActive = _currentPage == index;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 320),
+                    curve: Curves.easeOutBack,
+                    margin: const EdgeInsets.symmetric(horizontal: 5),
+                    width: isActive ? 28 : 8,
                     height: 8,
                     decoration: BoxDecoration(
-                      color: _currentPage == index
+                      color: isActive
                           ? slide.color
-                          : AppColors.disabled,
+                          : AppColors.disabled.withValues(alpha: 0.5),
                       borderRadius: AppRadii.pill,
+                      boxShadow: isActive
+                          ? [
+                              BoxShadow(
+                                color: slide.color.withValues(alpha: 0.35),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : null,
                     ),
-                  ),
-                ),
+                  );
+                }),
               ),
               const SizedBox(height: AppSpacing.xl),
               PrimaryButton(

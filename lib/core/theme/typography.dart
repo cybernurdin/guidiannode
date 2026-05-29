@@ -1,96 +1,81 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'colors.dart';
 
 class AppTypography {
   const AppTypography._();
 
-  static const String fontFamily = 'Roboto';
-
-  static const TextTheme textTheme = TextTheme(
-    displayLarge: TextStyle(
+  static final TextTheme textTheme = TextTheme(
+    displayLarge: GoogleFonts.outfit(
       fontSize: 34,
       fontWeight: FontWeight.w700,
       color: AppColors.textPrimary,
-      fontFamily: fontFamily,
     ),
-    displayMedium: TextStyle(
+    displayMedium: GoogleFonts.outfit(
       fontSize: 28,
       fontWeight: FontWeight.w700,
       color: AppColors.textPrimary,
-      fontFamily: fontFamily,
     ),
-    headlineLarge: TextStyle(
+    headlineLarge: GoogleFonts.outfit(
       fontSize: 24,
       fontWeight: FontWeight.w700,
       color: AppColors.textPrimary,
-      fontFamily: fontFamily,
     ),
-    headlineMedium: TextStyle(
+    headlineMedium: GoogleFonts.outfit(
       fontSize: 22,
       fontWeight: FontWeight.w700,
       color: AppColors.textPrimary,
-      fontFamily: fontFamily,
     ),
-    headlineSmall: TextStyle(
+    headlineSmall: GoogleFonts.outfit(
       fontSize: 20,
       fontWeight: FontWeight.w700,
       color: AppColors.textPrimary,
-      fontFamily: fontFamily,
     ),
-    titleLarge: TextStyle(
+    titleLarge: GoogleFonts.inter(
       fontSize: 18,
       fontWeight: FontWeight.w600,
       color: AppColors.textPrimary,
-      fontFamily: fontFamily,
     ),
-    titleMedium: TextStyle(
+    titleMedium: GoogleFonts.inter(
       fontSize: 16,
       fontWeight: FontWeight.w600,
       color: AppColors.textPrimary,
-      fontFamily: fontFamily,
     ),
-    titleSmall: TextStyle(
+    titleSmall: GoogleFonts.inter(
       fontSize: 14,
       fontWeight: FontWeight.w600,
       color: AppColors.textPrimary,
-      fontFamily: fontFamily,
     ),
-    bodyLarge: TextStyle(
+    bodyLarge: GoogleFonts.inter(
       fontSize: 16,
       fontWeight: FontWeight.w400,
       color: AppColors.textPrimary,
-      fontFamily: fontFamily,
     ),
-    bodyMedium: TextStyle(
+    bodyMedium: GoogleFonts.inter(
       fontSize: 14,
       fontWeight: FontWeight.w400,
       color: AppColors.textPrimary,
-      fontFamily: fontFamily,
     ),
-    bodySmall: TextStyle(
+    bodySmall: GoogleFonts.inter(
       fontSize: 13,
       fontWeight: FontWeight.w500,
       color: AppColors.textSecondary,
-      fontFamily: fontFamily,
     ),
-    labelLarge: TextStyle(
+    labelLarge: GoogleFonts.inter(
       fontSize: 14,
       fontWeight: FontWeight.w700,
       color: AppColors.cleanWhite,
-      fontFamily: fontFamily,
     ),
-    labelMedium: TextStyle(
+    labelMedium: GoogleFonts.inter(
       fontSize: 13,
       fontWeight: FontWeight.w600,
       color: AppColors.textSecondary,
-      fontFamily: fontFamily,
     ),
-    labelSmall: TextStyle(
+    labelSmall: GoogleFonts.inter(
       fontSize: 11,
       fontWeight: FontWeight.w600,
       color: AppColors.textTertiary,
-      fontFamily: fontFamily,
     ),
   );
 }

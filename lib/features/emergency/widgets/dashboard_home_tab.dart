@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/services/app_preferences.dart';
 import '../../../core/services/session_service.dart';
@@ -55,72 +56,164 @@ class DashboardHomeTab extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         children: [
-          Container(
+          // Floating curved header card
+          Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.md,
-              AppSpacing.lg,
               AppSpacing.md,
-              AppSpacing.xl,
+              AppSpacing.md,
+              0,
             ),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: AppColors.emergencyGradient,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+            child: ClipRRect(
+              borderRadius: AppRadii.card,
+              child: Container(
+                clipBehavior: Clip.antiAlias,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF0F172A), // Dark obsidian base
+                  borderRadius: AppRadii.card,
+                ),
+                child: Stack(
                   children: [
-                    const StatusBadge(
-                      label: 'GuardianNode live',
-                      tone: StatusTone.info,
+                    // Internal mesh gradient blobs
+                    Positioned(
+                      top: -110,
+                      right: -70,
+                      child: Container(
+                        width: 250,
+                        height: 250,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(
+                            colors: [
+                              AppColors.trustBlue.withValues(alpha: 0.45),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
-                    const Spacer(),
-                    IconButton(
-                      onPressed: onOpenProfile,
-                      icon: const Icon(
-                        Icons.account_circle_outlined,
-                        color: AppColors.cleanWhite,
+                    Positioned(
+                      bottom: -90,
+                      left: -50,
+                      child: Container(
+                        width: 230,
+                        height: 230,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(
+                            colors: [
+                              AppColors.error.withValues(alpha: 0.16),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Glass border outline
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: AppRadii.card,
+                        border: Border.all(
+                          color: AppColors.cleanWhite.withValues(alpha: 0.12),
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+
+                    // Header content
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.md,
+                        AppSpacing.md,
+                        AppSpacing.md,
+                        AppSpacing.lg,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const StatusBadge(
+                                label: 'GuardianNode live',
+                                tone: StatusTone.info,
+                              ),
+                              const Spacer(),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: AppColors.cleanWhite.withValues(
+                                    alpha: 0.08,
+                                  ),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: AppColors.cleanWhite.withValues(
+                                      alpha: 0.16,
+                                    ),
+                                    width: 1.2,
+                                  ),
+                                ),
+                                child: IconButton(
+                                  onPressed: onOpenProfile,
+                                  icon: const Icon(
+                                    Icons.account_circle_outlined,
+                                    color: AppColors.cleanWhite,
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+                          Text(
+                            'Stay ready, $firstName',
+                            style: GoogleFonts.outfit(
+                              color: AppColors.cleanWhite,
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.4,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            activeAlert == null
+                                ? 'Your SOS control is ready. Nearby alerts and safe access points are tracked below.'
+                                : 'Your emergency session is active and your live position is still streaming.',
+                            style: GoogleFonts.inter(
+                              color: AppColors.cleanWhite.withValues(
+                                alpha: 0.88,
+                              ),
+                              fontSize: 13.5,
+                              height: 1.45,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: AppSpacing.md),
-                Text(
-                  'Stay ready, $firstName',
-                  style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                    color: AppColors.cleanWhite,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  activeAlert == null
-                      ? 'Your SOS control is ready. Nearby alerts and safe access points are tracked below.'
-                      : 'Your emergency session is active and your live position is still streaming.',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: AppColors.cleanWhite.withValues(alpha: 0.92),
-                    height: 1.45,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
+
           Padding(
             padding: AppSpacing.screenPadding,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _buildStatusBanner(),
-                const SizedBox(height: AppSpacing.lg),
+                const SizedBox(height: AppSpacing.md),
+
+                // Location toggle card styled as premium glassmorphic tile
                 Container(
                   decoration: BoxDecoration(
                     color: AppColors.surface,
                     borderRadius: AppRadii.card,
-                    border: Border.all(color: AppColors.border),
+                    border: Border.all(
+                      color: AppColors.border.withValues(alpha: 0.5),
+                    ),
                   ),
                   child: SwitchListTile.adaptive(
                     value: coordinator.locationSharingEnabled,
@@ -128,17 +221,39 @@ class DashboardHomeTab extends StatelessWidget {
                         ? null
                         : onToggleLocationSharing,
                     activeThumbColor: AppColors.safetyGreen,
-                    activeTrackColor:
-                        AppColors.safetyGreen.withValues(alpha: 0.3),
-                    title: const Text('Keep location ready for emergencies'),
+                    activeTrackColor: AppColors.safetyGreen.withValues(
+                      alpha: 0.3,
+                    ),
+                    title: Text(
+                      'Keep location ready for emergencies',
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14.5,
+                      ),
+                    ),
                     subtitle: Text(
                       coordinator.currentPosition?.displayAddress ??
                           'Enable location sharing so nearby routing and alert discovery can work well.',
-                      style: Theme.of(context).textTheme.bodySmall,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondary,
+                        height: 1.25,
+                      ),
                     ),
-                    secondary: const Icon(Icons.location_searching_rounded),
+                    secondary: Container(
+                      padding: const EdgeInsets.all(AppSpacing.xs + 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.trustBlueSurface,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.location_searching_rounded,
+                        color: AppColors.trustBlue,
+                        size: 20,
+                      ),
+                    ),
                   ),
                 ),
+
                 const SizedBox(height: AppSpacing.xl),
                 Center(
                   child: SosButton(
@@ -151,6 +266,7 @@ class DashboardHomeTab extends StatelessWidget {
                         : 'Tap once to send emergency alert',
                   ),
                 ),
+
                 const SizedBox(height: AppSpacing.lg),
                 if (activeAlert != null)
                   OutlineActionButton(
@@ -158,6 +274,7 @@ class DashboardHomeTab extends StatelessWidget {
                     icon: Icons.my_location_rounded,
                     onPressed: onOpenActiveSos,
                   ),
+
                 const SizedBox(height: AppSpacing.xl),
                 SectionHeader(
                   title: 'Emergency shortcuts',
@@ -173,7 +290,7 @@ class DashboardHomeTab extends StatelessWidget {
                   physics: const NeverScrollableScrollPhysics(),
                   mainAxisSpacing: AppSpacing.sm,
                   crossAxisSpacing: AppSpacing.sm,
-                  childAspectRatio: 1.18,
+                  childAspectRatio: 1.22,
                   children: [
                     ActionTile(
                       title: 'Medical',
@@ -205,6 +322,7 @@ class DashboardHomeTab extends StatelessWidget {
                     ),
                   ],
                 ),
+
                 if (showTips) ...[
                   const SizedBox(height: AppSpacing.xl),
                   const InfoBanner(
@@ -213,6 +331,7 @@ class DashboardHomeTab extends StatelessWidget {
                         'If you can move safely, head toward a visible public point while keeping your phone available for live location updates.',
                   ),
                 ],
+
                 const SizedBox(height: AppSpacing.xl),
                 const SectionHeader(
                   title: 'Recent activity',
@@ -249,7 +368,8 @@ class DashboardHomeTab extends StatelessWidget {
                           ),
                         ),
                       ),
-                const SizedBox(height: AppSpacing.xl),
+
+                const SizedBox(height: AppSpacing.lg),
                 const SectionHeader(
                   title: 'Community support',
                   subtitle:

@@ -36,6 +36,6 @@ void main() {
     );
 
     expect(find.text('Live'), findsOneWidget);
-    expect(find.byIcon(Icons.notifications_active_outlined), findsOneWidget);
+    expect(find.byType(StatusBadge), findsOneWidget);
   });
 }

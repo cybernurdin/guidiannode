@@ -89,7 +89,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   value: _coordinator.locationSharingEnabled,
                   onChanged: _isUpdatingLocation ? null : _toggleLocation,
                   activeThumbColor: AppColors.safetyGreen,
-                  activeTrackColor: AppColors.safetyGreen.withValues(alpha: 0.3),
+                  activeTrackColor: AppColors.safetyGreen.withValues(
+                    alpha: 0.3,
+                  ),
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -108,7 +110,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     setState(() => _showCommunityBanners = value);
                   },
                   activeThumbColor: AppColors.safetyGreen,
-                  activeTrackColor: AppColors.safetyGreen.withValues(alpha: 0.3),
+                  activeTrackColor: AppColors.safetyGreen.withValues(
+                    alpha: 0.3,
+                  ),
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -126,7 +130,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     setState(() => _showSafetyTips = value);
                   },
                   activeThumbColor: AppColors.safetyGreen,
-                  activeTrackColor: AppColors.safetyGreen.withValues(alpha: 0.3),
+                  activeTrackColor: AppColors.safetyGreen.withValues(
+                    alpha: 0.3,
+                  ),
                 ),
               ),
               const SizedBox(height: AppSpacing.xl),

@@ -39,45 +39,86 @@ class StatusBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = _paletteForTone(tone);
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: palette.background,
-        borderRadius: AppRadii.card,
-        border: Border.all(color: palette.border),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon ?? palette.icon, color: palette.foreground, size: 20),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (title != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.xxs),
-                    child: Text(
-                      title!,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: palette.foreground,
-                      ),
-                    ),
-                  ),
-                Text(
-                  message,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: palette.foreground,
-                    fontWeight: FontWeight.w600,
-                    height: 1.35,
+    return ClipRRect(
+      borderRadius: AppRadii.card,
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: palette.background,
+          borderRadius: AppRadii.card,
+          border: Border.all(color: palette.foreground.withValues(alpha: 0.12)),
+        ),
+        child: Stack(
+          children: [
+            // Left decorative accent bar
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              child: Container(
+                width: 4,
+                decoration: BoxDecoration(
+                  color: palette.foreground,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(2),
+                    bottomLeft: Radius.circular(2),
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
-        ],
+            // Banner content
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md + 4,
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.md,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    icon ?? palette.icon,
+                    color: palette.foreground,
+                    size: 20,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (title != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 3),
+                            child: Text(
+                              title!,
+                              style: Theme.of(context).textTheme.titleSmall
+                                  ?.copyWith(
+                                    color: palette.foreground,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: -0.2,
+                                  ),
+                            ),
+                          ),
+                        Text(
+                          message,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: palette.foreground.withValues(
+                                  alpha: 0.9,
+                                ),
+                                fontWeight: FontWeight.w600,
+                                height: 1.4,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -146,29 +187,47 @@ class StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = _paletteForTone(tone);
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: palette.background,
-        borderRadius: AppRadii.pill,
-        border: Border.all(color: palette.border),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon ?? palette.icon, size: 14, color: palette.foreground),
-          const SizedBox(width: AppSpacing.xs),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: palette.foreground,
-              fontWeight: FontWeight.w700,
+    return Semantics(
+      label: label,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: palette.background,
+          borderRadius: AppRadii.pill,
+          border: Border.all(color: palette.foreground.withValues(alpha: 0.15)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            icon == null
+                ? Container(
+                    width: 7,
+                    height: 7,
+                    decoration: BoxDecoration(
+                      color: palette.foreground,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: palette.foreground.withValues(alpha: 0.35),
+                          blurRadius: 4,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                  )
+                : Icon(icon, size: 13, color: palette.foreground),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: palette.foreground,
+                fontWeight: FontWeight.w800,
+                fontSize: 11,
+                letterSpacing: 0.15,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -187,6 +246,10 @@ class StatusSnackbar {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         backgroundColor: palette.foreground,
+        behavior: SnackBarBehavior.floating,
+        shape: const RoundedRectangleBorder(borderRadius: AppRadii.card),
+        elevation: 6,
+        margin: const EdgeInsets.all(AppSpacing.md),
         content: Row(
           children: [
             Icon(palette.icon, color: AppColors.cleanWhite, size: 18),
@@ -196,7 +259,7 @@ class StatusSnackbar {
                 message,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: AppColors.cleanWhite,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
@@ -211,13 +274,11 @@ class _StatusPalette {
   const _StatusPalette({
     required this.background,
     required this.foreground,
-    required this.border,
     required this.icon,
   });
 
   final Color background;
   final Color foreground;
-  final Color border;
   final IconData icon;
 }
 
@@ -226,31 +287,27 @@ _StatusPalette _paletteForTone(StatusTone tone) {
     StatusTone.success => const _StatusPalette(
       background: AppColors.safetyGreenSurface,
       foreground: AppColors.safetyGreen,
-      border: AppColors.safetyGreen,
       icon: Icons.check_circle_outline_rounded,
     ),
     StatusTone.warning => const _StatusPalette(
       background: AppColors.communityYellowSurface,
-      foreground: AppColors.textPrimary,
-      border: AppColors.communityYellow,
+      foreground: AppColors
+          .communityYellow, // Saturated communityYellow instead of textPrimary for clean styling
       icon: Icons.warning_amber_rounded,
     ),
     StatusTone.error => const _StatusPalette(
       background: AppColors.errorSurface,
       foreground: AppColors.error,
-      border: AppColors.error,
       icon: Icons.error_outline_rounded,
     ),
     StatusTone.info => const _StatusPalette(
       background: AppColors.trustBlueSurface,
-      foreground: AppColors.trustBlueDark,
-      border: AppColors.trustBlue,
+      foreground: AppColors.trustBlue,
       icon: Icons.info_outline_rounded,
     ),
     StatusTone.action => const _StatusPalette(
       background: AppColors.engagementOrangeSurface,
       foreground: AppColors.engagementOrange,
-      border: AppColors.engagementOrange,
       icon: Icons.notifications_active_outlined,
     ),
   };

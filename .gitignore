@@ -43,3 +43,15 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local secrets and deployment-only configuration
+.env
+.env.*
+!*.env.example
+server/.env
+server/.env.*
+!server/.env.example
+android/local.properties
+android/key.properties
+ios/Flutter/Secrets.xcconfig
+ios/Flutter/*.local.xcconfig
