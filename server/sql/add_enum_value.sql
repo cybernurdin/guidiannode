@@ -52,6 +52,15 @@ alter table if exists public.otp_sessions
   add column if not exists registration_payload jsonb;
 
 alter table if exists public.otp_sessions
+  add column if not exists pending_user_id uuid;
+
+alter table if exists public.otp_sessions
+  add column if not exists verification_method text;
+
+alter table if exists public.otp_sessions
+  add column if not exists whatsapp_sender_phone text;
+
+alter table if exists public.otp_sessions
   add column if not exists metadata jsonb not null default '{}'::jsonb;
 
 alter table if exists public.otp_sessions
@@ -69,6 +78,12 @@ alter table if exists public.alerts
 alter table if exists public.users
   add column if not exists created_at timestamptz not null default timezone('utc', now());
 
+alter table if exists public.users
+  add column if not exists phone_verified boolean not null default false;
+
+alter table if exists public.users
+  add column if not exists phone_verified_at timestamptz;
+
 alter table if exists public.emergency_contacts
   add column if not exists created_at timestamptz not null default timezone('utc', now());
 
@@ -83,5 +98,9 @@ create index if not exists otp_sessions_phone_status_idx
 
 create index if not exists otp_sessions_purpose_status_idx
   on public.otp_sessions (purpose, status, created_at desc);
+
+create index if not exists otp_sessions_pending_user_idx
+  on public.otp_sessions (pending_user_id)
+  where pending_user_id is not null;
 
 notify pgrst, 'reload schema';

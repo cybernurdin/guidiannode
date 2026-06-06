@@ -291,8 +291,7 @@ _StatusPalette _paletteForTone(StatusTone tone) {
     ),
     StatusTone.warning => const _StatusPalette(
       background: AppColors.communityYellowSurface,
-      foreground: AppColors
-          .communityYellow, // Saturated communityYellow instead of textPrimary for clean styling
+      foreground: Color(0xFF8A5A00),
       icon: Icons.warning_amber_rounded,
     ),
     StatusTone.error => const _StatusPalette(

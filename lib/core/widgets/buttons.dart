@@ -114,7 +114,7 @@ class _AppButtonState extends State<AppButton>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: isEnabled
-              ? [AppColors.trustBlue, const Color(0xFF1D4ED8)]
+              ? [AppColors.trustBlue, AppColors.trustBlueDark]
               : [AppColors.disabled, AppColors.disabled.withValues(alpha: 0.8)],
         ),
         boxShadow: isEnabled && !_isPressed
@@ -147,13 +147,13 @@ class _AppButtonState extends State<AppButton>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: isEnabled
-              ? [AppColors.error, const Color(0xFFDC2626)]
+              ? [AppColors.engagementOrange, const Color(0xFFC44920)]
               : [AppColors.disabled, AppColors.disabled.withValues(alpha: 0.8)],
         ),
         boxShadow: isEnabled && !_isPressed
             ? [
                 BoxShadow(
-                  color: AppColors.error.withValues(alpha: 0.2),
+                  color: AppColors.engagementOrange.withValues(alpha: 0.22),
                   blurRadius: 16,
                   offset: const Offset(0, 6),
                 ),
@@ -396,7 +396,9 @@ class _SosButtonState extends State<SosButton>
   @override
   Widget build(BuildContext context) {
     final isSafe = widget.isSafeState;
-    final accentColor = isSafe ? AppColors.safetyGreen : AppColors.error;
+    final accentColor = isSafe
+        ? AppColors.safetyGreen
+        : AppColors.engagementOrange;
     final ringColor = accentColor.withValues(alpha: 0.2);
     final label = widget.label ?? (isSafe ? 'Protected' : 'SOS');
     final subtitle =

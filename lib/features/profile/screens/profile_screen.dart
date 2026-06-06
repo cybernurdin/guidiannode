@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 
 import '../../../core/services/session_service.dart';
 import '../../../core/theme/colors.dart';
+import '../../../core/theme/radii.dart';
 import '../../../core/theme/spacing.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/cards.dart';
+import '../../../core/widgets/guardian_components.dart';
 import '../../../core/widgets/placeholders.dart';
 import '../../../core/widgets/status_widgets.dart';
 import '../models/profile_models.dart';
@@ -201,11 +203,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: ListView(
           padding: AppSpacing.screenPadding,
           children: [
-            ProfileCard(
+            _ProfileHero(
               name: profile.fullName,
-              phoneNumber: profile.phoneNumber,
               neighborhood: profile.neighborhood,
-              locationEnabled: profile.locationPermission,
             ),
             const SizedBox(height: AppSpacing.md),
             if (profile.locationPermission)
@@ -260,7 +260,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       labelText: 'Phone number',
                       prefixIcon: Icon(Icons.lock_outline_rounded),
                       helperText:
-                          'Phone changes stay aligned with the OTP sign-in flow.',
+                          'Phone changes stay aligned with WhatsApp sign-in.',
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),
@@ -279,9 +279,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: AppSpacing.xl),
                   const SectionHeader(
-                    title: 'Emergency contact',
+                    title: 'Emergency Contacts',
                     subtitle:
-                        'GuardianNode currently supports one primary contact on this backend.',
+                        'These contacts will be notified during an emergency.',
                   ),
                   const SizedBox(height: AppSpacing.md),
                   EmergencyContactCard(
@@ -348,6 +348,92 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ProfileHero extends StatelessWidget {
+  const _ProfileHero({required this.name, required this.neighborhood});
+
+  final String name;
+  final String neighborhood;
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = name.trim().isEmpty ? 'G' : name.trim()[0].toUpperCase();
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: const BoxDecoration(
+        color: AppColors.trustBlue,
+        borderRadius: AppRadii.card,
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 86,
+            height: 86,
+            decoration: BoxDecoration(
+              color: AppColors.cleanWhite,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.cleanWhite, width: 3),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              initial,
+              style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                color: AppColors.trustBlue,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            name.isEmpty ? 'GuardianNode Member' : name,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: AppColors.cleanWhite,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: AppSpacing.xs,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.safetyGreenSurface,
+              borderRadius: AppRadii.pill,
+            ),
+            child: Text(
+              'Verified Member',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: AppColors.safetyGreen,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Row(
+            children: const [
+              // TODO: Replace placeholder stats when a profile stats endpoint exists.
+              ProfileStatCard(value: '0', label: 'Alerts', onDark: true),
+              ProfileStatCard(value: '0', label: 'Helped', onDark: true),
+              ProfileStatCard(value: '0', label: 'Following', onDark: true),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            neighborhood.isEmpty ? 'Bamenda, Cameroon' : neighborhood,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColors.cleanWhite.withValues(alpha: 0.82),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }

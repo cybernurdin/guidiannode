@@ -4,6 +4,8 @@ import '../../../core/theme/colors.dart';
 import '../../../core/theme/radii.dart';
 import '../../../core/theme/spacing.dart';
 import '../../../core/widgets/bottom_sheets.dart';
+import '../../../core/widgets/buttons.dart';
+import '../../../core/widgets/guardian_components.dart';
 
 class DashboardSheets {
   const DashboardSheets._();
@@ -13,57 +15,78 @@ class DashboardSheets {
     Future<void> Function(String emergencyType, {String? description})
     onTrigger,
   ) {
+    const categories = [
+      _EmergencyCategory(
+        type: 'security',
+        title: 'Security',
+        subtitle: 'Threat or crime',
+        icon: Icons.shield_rounded,
+        color: AppColors.trustBlue,
+      ),
+      _EmergencyCategory(
+        type: 'medical',
+        title: 'Medical',
+        subtitle: 'Health emergency',
+        icon: Icons.local_hospital_rounded,
+        color: AppColors.safetyGreen,
+      ),
+      _EmergencyCategory(
+        type: 'fire',
+        title: 'Fire',
+        subtitle: 'Fire incident',
+        icon: Icons.local_fire_department_rounded,
+        color: AppColors.engagementOrange,
+      ),
+      _EmergencyCategory(
+        type: 'accident',
+        title: 'Accident',
+        subtitle: 'Traffic accident',
+        icon: Icons.car_crash_rounded,
+        color: AppColors.communityYellow,
+      ),
+    ];
+
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       showDragHandle: false,
-      builder: (context) => AppBottomSheet(
-        title: 'Choose emergency type',
-        subtitle:
-            'Select the closest emergency category. GuardianNode keeps the same SOS backend flow underneath.',
-        child: Column(
-          children: [
-            _CategoryOption(
-              icon: Icons.sos_rounded,
-              title: 'General distress',
-              subtitle: 'Immediate help needed',
-              onTap: () {
-                Navigator.of(context).pop();
-                onTrigger('general_distress');
-              },
+      builder: (context) {
+        var selected = categories.first;
+        return StatefulBuilder(
+          builder: (context, setSheetState) => AppBottomSheet(
+            title: "What's the emergency?",
+            subtitle: 'Select the type of help you need.',
+            child: Column(
+              children: [
+                GridView.count(
+                  crossAxisCount: 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: AppSpacing.md,
+                  crossAxisSpacing: AppSpacing.md,
+                  childAspectRatio: 0.94,
+                  children: [
+                    for (final category in categories)
+                      _SelectableCategoryCard(
+                        category: category,
+                        selected: selected.type == category.type,
+                        onTap: () => setSheetState(() => selected = category),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                PrimaryButton(
+                  text: 'Next',
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    onTrigger(selected.type);
+                  },
+                ),
+              ],
             ),
-            const SizedBox(height: AppSpacing.sm),
-            _CategoryOption(
-              icon: Icons.local_hospital_outlined,
-              title: 'Medical emergency',
-              subtitle: 'Illness, injury, urgent care',
-              onTap: () {
-                Navigator.of(context).pop();
-                onTrigger('medical');
-              },
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            _CategoryOption(
-              icon: Icons.local_fire_department_outlined,
-              title: 'Fire emergency',
-              subtitle: 'Smoke, flames, or evacuation risk',
-              onTap: () {
-                Navigator.of(context).pop();
-                onTrigger('fire');
-              },
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            _CategoryOption(
-              icon: Icons.security_outlined,
-              title: 'Security emergency',
-              subtitle: 'Violence, threat, or unsafe situation',
-              onTap: () {
-                Navigator.of(context).pop();
-                onTrigger('security');
-              },
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -94,36 +117,52 @@ class DashboardSheets {
   }
 }
 
-class _CategoryOption extends StatelessWidget {
-  const _CategoryOption({
-    required this.icon,
+class _EmergencyCategory {
+  const _EmergencyCategory({
+    required this.type,
     required this.title,
     required this.subtitle,
+    required this.icon,
+    required this.color,
+  });
+
+  final String type;
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+}
+
+class _SelectableCategoryCard extends StatelessWidget {
+  const _SelectableCategoryCard({
+    required this.category,
+    required this.selected,
     required this.onTap,
   });
 
-  final IconData icon;
-  final String title;
-  final String subtitle;
+  final _EmergencyCategory category;
+  final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Container(
-        width: 44,
-        height: 44,
-        decoration: const BoxDecoration(
-          color: AppColors.trustBlueSurface,
-          borderRadius: AppRadii.card,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        borderRadius: AppRadii.card,
+        border: Border.all(
+          color: selected ? AppColors.trustBlue : Colors.transparent,
+          width: 2,
         ),
-        child: Icon(icon, color: AppColors.trustBlueDark),
       ),
-      title: Text(title),
-      subtitle: Text(subtitle),
-      trailing: const Icon(Icons.chevron_right_rounded),
-      onTap: onTap,
+      child: EmergencyCategoryCard(
+        title: category.title,
+        subtitle: category.subtitle,
+        icon: category.icon,
+        color: category.color,
+        onTap: onTap,
+      ),
     );
   }
 }

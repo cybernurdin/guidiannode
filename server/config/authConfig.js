@@ -50,13 +50,13 @@ const authConfig = Object.freeze({
   debugOtpReferences: ['env:DEBUG_DEFAULT_OTP', 'env:DEBUG_BACKUP_OTP'],
   otpExpiresMinutes: parseInteger(process.env.OTP_EXPIRES_MINUTES, 10),
   maxOtpAttempts: 5,
-  jwtSecret: process.env.JWT_SECRET,
+  jwtSecret: process.env.JWT_SECRET || process.env.SESSION_SECRET,
   jwtExpiresIn: '7d',
   sessionExpiresInSeconds: 60 * 60 * 24 * 7,
 });
 
 if (!authConfig.jwtSecret) {
-  throw new Error('Missing JWT_SECRET in environment variables');
+  throw new Error('Missing JWT_SECRET or SESSION_SECRET in environment variables');
 }
 
 const buildDebugOtpHelperMessage = () => {
@@ -69,11 +69,11 @@ const buildDebugOtpHelperMessage = () => {
 
 const logAuthModeBanner = () => {
   if (!authConfig.debugAuthMode) {
-    console.log('[auth] DEBUG_AUTH_MODE=false. Real OTP delivery is expected.');
+    console.log('[auth] DEBUG_AUTH_MODE=false. Inbound WhatsApp verification is active.');
     return;
   }
 
-  console.warn('[auth] WARNING: DEBUG_AUTH_MODE=true. Real SMS delivery is disabled.');
+  console.warn('[auth] WARNING: DEBUG_AUTH_MODE=true. Inbound WhatsApp verification is bypassed.');
 
   if (process.env.NODE_ENV === 'production') {
     console.warn('[auth] WARNING: Debug auth mode is active while NODE_ENV=production.');

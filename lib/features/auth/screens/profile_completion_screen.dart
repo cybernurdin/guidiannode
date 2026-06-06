@@ -127,7 +127,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
             const InfoBanner(
               title: 'Required before first emergency',
               message:
-                  'This information stays tied to your account and supports both OTP verification and emergency coordination.',
+                  'This information stays tied to your verified account and supports emergency coordination.',
             ),
             const SizedBox(height: AppSpacing.lg),
             TextFormField(

@@ -1,4 +1,6 @@
-storeFile=../upload-keystore.jks
-storePassword=replace_with_store_password
+# Copy this file to android/key.properties and fill it with your private upload key.
+# Never commit android/key.properties or the keystore file.
+storePassword=replace_with_private_store_password
+keyPassword=replace_with_private_key_password
 keyAlias=upload
-keyPassword=replace_with_key_password
+storeFile=app/upload-keystore.jks

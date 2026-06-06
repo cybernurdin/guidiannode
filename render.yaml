@@ -1,0 +1,42 @@
+services:
+  - type: web
+    name: guidiannode-api
+    runtime: docker
+    dockerfilePath: ./server/Dockerfile
+    dockerContext: ./server
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: APP_BASE_URL
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GOOGLE_MAPS_SERVER_API_KEY
+        sync: false
+      - key: META_APP_ID
+        sync: false
+      - key: META_BUSINESS_ID
+        sync: false
+      - key: WHATSAPP_API_VERSION
+        value: v22.0
+      - key: WHATSAPP_TARGET_NUMBER
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_BUSINESS_ACCOUNT_ID
+        sync: false
+      - key: WHATSAPP_VERIFY_TOKEN
+        generateValue: true
+      - key: WHATSAPP_APP_SECRET
+        sync: false
+      - key: WEBHOOK_URL
+        sync: false

@@ -3,12 +3,13 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/spacing.dart';
 import '../../../core/widgets/cards.dart';
+import '../../../core/widgets/guardian_components.dart';
 import '../../../core/widgets/placeholders.dart';
 import '../../../core/widgets/status_widgets.dart';
 import '../models/emergency_models.dart';
 import '../utils/formatters.dart';
 
-class DashboardAlertsTab extends StatelessWidget {
+class DashboardAlertsTab extends StatefulWidget {
   const DashboardAlertsTab({
     super.key,
     required this.nearbyAlerts,
@@ -25,84 +26,103 @@ class DashboardAlertsTab extends StatelessWidget {
   final void Function(EmergencyAlert alert) onOpenAlert;
 
   @override
+  State<DashboardAlertsTab> createState() => _DashboardAlertsTabState();
+}
+
+class _DashboardAlertsTabState extends State<DashboardAlertsTab> {
+  int _selectedTab = 0;
+
+  @override
   Widget build(BuildContext context) {
+    final visibleAlerts = switch (_selectedTab) {
+      0 => widget.nearbyAlerts,
+      1 => const <EmergencyAlert>[],
+      _ => widget.nearbyAlerts,
+    };
+
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: RefreshIndicator(
-        onRefresh: onRefresh,
-        child: ListView(
-          padding: AppSpacing.screenPadding,
-          children: [
-            const SectionHeader(
-              title: 'Nearby alerts',
-              subtitle:
-                  'Live incidents around you appear here as the backend and Supabase feed update.',
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Row(
-              children: [
-                Expanded(
-                  child: StatTile(
-                    label: 'Live alerts',
-                    value: '${nearbyAlerts.length}',
-                    helper: '3 km radius',
-                    tone: nearbyAlerts.isEmpty
-                        ? StatusTone.info
-                        : StatusTone.error,
-                  ),
+      backgroundColor: AppColors.cleanWhite,
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: widget.onRefresh,
+          child: ListView(
+            padding: AppSpacing.screenPadding,
+            children: [
+              GuardianAppBar(
+                title: 'Community Alerts',
+                leading: IconButton(
+                  tooltip: 'Menu',
+                  onPressed: () {},
+                  icon: const Icon(Icons.menu_rounded),
                 ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: StatTile(
-                    label: 'Feed',
-                    value: alertsError == null ? 'Connected' : 'Attention',
-                    helper: alertsError == null
-                        ? 'Realtime ready'
-                        : 'Retry soon',
-                    tone: alertsError == null
-                        ? StatusTone.success
-                        : StatusTone.warning,
+                actions: [
+                  IconButton(
+                    tooltip: 'Filter',
+                    onPressed: widget.onRefresh,
+                    icon: const Icon(Icons.tune_rounded),
                   ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              SegmentedTabs(
+                tabs: const ['Nearby', 'Following', 'All'],
+                selectedIndex: _selectedTab,
+                onChanged: (index) => setState(() => _selectedTab = index),
+              ),
+              if (widget.alertsError != null) ...[
+                const SizedBox(height: AppSpacing.md),
+                WarningBanner(
+                  title: 'Nearby alerts issue',
+                  message: widget.alertsError!,
                 ),
               ],
-            ),
-            if (alertsError != null) ...[
-              const SizedBox(height: AppSpacing.md),
-              WarningBanner(
-                title: 'Nearby alerts issue',
-                message: alertsError!,
-              ),
-            ],
-            const SizedBox(height: AppSpacing.lg),
-            if (isLoadingAlerts)
-              const LoadingCardList(count: 3)
-            else if (nearbyAlerts.isEmpty)
-              EmptyState(
-                title: 'No nearby alerts',
-                message:
-                    'When new SOS activity appears in your radius, it will surface here.',
-                actionLabel: 'Refresh now',
-                onAction: onRefresh,
-              )
-            else
-              ...nearbyAlerts.map(
-                (alert) => Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                  child: AlertCard(
-                    title: formatEmergencyType(alert.emergencyType),
-                    subtitle: alert.displayAddress,
-                    distance: formatDistance(alert.distanceMeters),
-                    time: formatRelativeTime(
-                      alert.updatedAt ?? alert.createdAt,
+              const SizedBox(height: AppSpacing.lg),
+              if (widget.isLoadingAlerts)
+                const LoadingCardList(count: 4)
+              else if (visibleAlerts.isEmpty)
+                EmptyState(
+                  title: _selectedTab == 1
+                      ? 'No followed alerts'
+                      : 'No community alerts',
+                  message: _selectedTab == 1
+                      ? 'Alerts you follow will appear here when that backend support is available.'
+                      : 'When SOS activity appears in your radius, it will surface here.',
+                  actionLabel: 'Refresh now',
+                  onAction: widget.onRefresh,
+                )
+              else
+                ...visibleAlerts.map(
+                  (alert) => Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                    child: AlertCard(
+                      title: formatEmergencyType(alert.emergencyType),
+                      subtitle: alert.displayAddress,
+                      distance: formatDistance(alert.distanceMeters),
+                      time: formatRelativeTime(
+                        alert.updatedAt ?? alert.createdAt,
+                      ),
+                      statusLabel: alert.status.toUpperCase(),
+                      tone: _toneForStatus(alert.status),
+                      onTap: () => widget.onOpenAlert(alert),
+                      onAction: () => widget.onOpenAlert(alert),
                     ),
-                    onTap: () => onOpenAlert(alert),
-                    onAction: () => onOpenAlert(alert),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  StatusTone _toneForStatus(String status) {
+    final normalized = status.toLowerCase();
+    if (normalized.contains('resolved')) {
+      return StatusTone.success;
+    }
+    if (normalized.contains('caution') || normalized.contains('pending')) {
+      return StatusTone.warning;
+    }
+    return StatusTone.action;
   }
 }

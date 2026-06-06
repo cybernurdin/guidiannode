@@ -4,6 +4,7 @@ const { AppError } = require('../utils/appError');
 const otpService = require('./otpService');
 const { createAppSession } = require('./sessionService');
 const userService = require('./userService');
+const whatsappVerificationService = require('./whatsappVerificationService');
 
 const buildOtpStartResponse = (otpSession, message) => ({
   success: true,
@@ -24,12 +25,15 @@ const startLoginOtp = async ({ phone_number }) => {
     throw new AppError('No account found for this phone number. Please register first.', 404, 'user_not_found');
   }
 
-  const otpSession = await otpService.createOtpSession({
-    phoneNumber: phone_number,
-    purpose: OTP_PURPOSE.LOGIN,
-  });
+  const verification = await whatsappVerificationService.createLoginVerification(
+    phone_number,
+    existingUser.id
+  );
 
-  return buildOtpStartResponse(otpSession, 'OTP sent successfully');
+  return {
+    ...buildWhatsappVerificationStartResponse(verification),
+    message: 'Continue with WhatsApp to verify your login.',
+  };
 };
 
 const startRegistrationOtp = async (registrationData) => {
@@ -43,6 +47,32 @@ const startRegistrationOtp = async (registrationData) => {
     otpSession,
     'Registration details accepted. Continue to OTP verification.'
   );
+};
+
+const buildWhatsappVerificationStartResponse = ({
+  otpSession,
+  token,
+  expiresAt,
+  whatsappUrl,
+}) => ({
+  success: true,
+  message: 'Registration details accepted. Continue with WhatsApp verification.',
+  verificationId: otpSession.id,
+  token,
+  expiresAt,
+  whatsappUrl,
+  next_step: 'verify_whatsapp',
+  // Compatibility alias for older clients that still name this record an OTP session.
+  otp_session_id: otpSession.id,
+  expires_at: expiresAt,
+});
+
+const startRegistrationWhatsappVerification = async (registrationData) => {
+  const verification = await whatsappVerificationService.createRegistrationVerification(
+    registrationData
+  );
+
+  return buildWhatsappVerificationStartResponse(verification);
 };
 
 const buildAuthenticatedPayload = (user, emergencyContact, message) => {
@@ -87,7 +117,7 @@ const finalizeRegistration = async (otpSession) => {
       })
     ).id;
 
-  const user = await userService.saveUserProfile({
+  let user = await userService.saveUserProfile({
     id: userId,
     full_name: registrationPayload.full_name,
     phone_number: otpSession.phone_number,
@@ -96,6 +126,7 @@ const finalizeRegistration = async (otpSession) => {
     latitude: registrationPayload.latitude ?? null,
     longitude: registrationPayload.longitude ?? null,
   });
+  user = await userService.markUserPhoneVerified(user);
 
   const emergencyContact = await userService.saveEmergencyContact({
     user_id: user.id,
@@ -107,20 +138,84 @@ const finalizeRegistration = async (otpSession) => {
   return buildAuthenticatedPayload(
     user,
     emergencyContact,
-    'OTP verified. Registration completed successfully.'
+    'Phone verified. Registration completed successfully.'
   );
 };
 
 const finalizeLogin = async (otpSession) => {
-  const user = await userService.getUserByPhoneNumber(otpSession.phone_number);
+  let user = await userService.getUserByPhoneNumber(otpSession.phone_number);
 
   if (!user) {
     throw new AppError('No registered profile exists for this phone number.', 404, 'user_not_found');
   }
 
+  user = await userService.markUserPhoneVerified(user);
+
   const emergencyContact = await userService.getPrimaryEmergencyContact(user.id);
 
-  return buildAuthenticatedPayload(user, emergencyContact, 'OTP verified successfully.');
+  return buildAuthenticatedPayload(user, emergencyContact, 'Phone verified successfully.');
+};
+
+const getVerificationStatus = async ({ verificationId }) => {
+  const otpSession = await whatsappVerificationService.resolveVerificationSessionStatus(
+    verificationId
+  );
+  const status = otpSession.status;
+
+  if (status === 'pending') {
+    return {
+      success: true,
+      status: 'pending',
+      verified: false,
+    };
+  }
+
+  if (status === 'expired') {
+    return {
+      success: true,
+      status: 'expired',
+      verified: false,
+      message: 'Your verification link has expired. Please request a new one.',
+    };
+  }
+
+  if (status !== 'verified') {
+    return {
+      success: true,
+      status,
+      verified: false,
+    };
+  }
+
+  const otpPurpose = normalizeOtpPurpose(otpSession.purpose);
+
+  if (otpPurpose === OTP_PURPOSE.REGISTER) {
+    const response = await finalizeRegistration(otpSession);
+
+    return {
+      ...response,
+      message: 'WhatsApp verification complete. Registration completed successfully.',
+      status: 'verified',
+      verified: true,
+    };
+  }
+
+  if (otpPurpose === OTP_PURPOSE.LOGIN) {
+    const response = await finalizeLogin(otpSession);
+
+    return {
+      ...response,
+      message: 'WhatsApp verification complete. Login successful.',
+      status: 'verified',
+      verified: true,
+    };
+  }
+
+  return {
+    success: true,
+    status: 'verified',
+    verified: true,
+  };
 };
 
 const verifyOtp = async ({ phone_number, otp_code, otp_session_id }) => {
@@ -166,8 +261,10 @@ const resendOtp = async ({ phone_number, otp_session_id }) => {
 };
 
 module.exports = {
+  getVerificationStatus,
   resendOtp,
   startLoginOtp,
   startRegistrationOtp,
+  startRegistrationWhatsappVerification,
   verifyOtp,
 };

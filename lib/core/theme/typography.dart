@@ -9,12 +9,12 @@ class AppTypography {
   static final TextTheme textTheme = TextTheme(
     displayLarge: GoogleFonts.outfit(
       fontSize: 34,
-      fontWeight: FontWeight.w700,
+      fontWeight: FontWeight.w800,
       color: AppColors.textPrimary,
     ),
     displayMedium: GoogleFonts.outfit(
       fontSize: 28,
-      fontWeight: FontWeight.w700,
+      fontWeight: FontWeight.w800,
       color: AppColors.textPrimary,
     ),
     headlineLarge: GoogleFonts.outfit(
@@ -34,7 +34,7 @@ class AppTypography {
     ),
     titleLarge: GoogleFonts.inter(
       fontSize: 18,
-      fontWeight: FontWeight.w600,
+      fontWeight: FontWeight.w700,
       color: AppColors.textPrimary,
     ),
     titleMedium: GoogleFonts.inter(

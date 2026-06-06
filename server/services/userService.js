@@ -139,7 +139,7 @@ const ensureAuthUserForPhoneNumber = async ({ phoneNumber, fullName }) => {
     phone_confirm: true,
     user_metadata: {
       full_name: fullName,
-      guardian_node_auth_flow: 'custom_phone_otp',
+      guardian_node_auth_flow: 'whatsapp_inbound',
     },
   });
 
@@ -211,6 +211,57 @@ const saveUserProfile = async (userData) => {
     ...payload,
     created_at: nowIso(),
   });
+};
+
+const markUserPhoneVerified = async (user) => {
+  const verifiedAt = nowIso();
+  let verifiedUser = user;
+  let { data, error } = await supabaseAdmin
+    .from(USERS_TABLE)
+    .update({
+      phone_verified: true,
+      phone_verified_at: verifiedAt,
+    })
+    .eq('id', user.id)
+    .select()
+    .single();
+
+  if (
+    error &&
+    (
+      isSchemaCacheMissingColumn(error, USERS_TABLE, 'phone_verified') ||
+      isSchemaCacheMissingColumn(error, USERS_TABLE, 'phone_verified_at')
+    )
+  ) {
+    error = null;
+    data = null;
+  }
+
+  if (error) {
+    throw wrapDatabaseError(error, USERS_TABLE);
+  }
+
+  if (data) {
+    verifiedUser = data;
+  }
+
+  const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
+    user.id,
+    {
+      phone_confirm: true,
+    }
+  );
+
+  if (authError) {
+    throw new AppError(
+      'Unable to mark the matching Supabase auth user as phone verified.',
+      500,
+      'auth_user_phone_verification_failed',
+      authError
+    );
+  }
+
+  return verifiedUser;
 };
 
 const getPrimaryEmergencyContact = async (userId) => {
@@ -316,6 +367,7 @@ module.exports = {
   getUserById,
   getUserProfile,
   getUserByPhoneNumber,
+  markUserPhoneVerified,
   saveEmergencyContact,
   saveUserProfile,
   updateUserProfile,

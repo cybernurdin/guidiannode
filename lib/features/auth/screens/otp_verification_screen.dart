@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -7,7 +9,6 @@ import '../../../core/theme/colors.dart';
 import '../../../core/theme/radii.dart';
 import '../../../core/theme/spacing.dart';
 import '../../../core/widgets/buttons.dart';
-import '../../../core/widgets/cards.dart';
 import '../../../core/widgets/status_widgets.dart';
 import '../widgets/auth_scaffold.dart';
 
@@ -37,6 +38,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   late final int _otpLength;
   late String? _otpSessionId;
   late String? _debugHelperMessage;
+  Timer? _resendTimer;
+  int _resendRemaining = 24;
 
   bool _isLoading = false;
 
@@ -48,10 +51,12 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     _focusNodes = List.generate(_otpLength, (_) => FocusNode());
     _otpSessionId = widget.otpSessionId;
     _debugHelperMessage = widget.debugHelperMessage;
+    _startResendTimer();
   }
 
   @override
   void dispose() {
+    _resendTimer?.cancel();
     for (final controller in _controllers) {
       controller.dispose();
     }
@@ -59,6 +64,25 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       node.dispose();
     }
     super.dispose();
+  }
+
+  void _startResendTimer() {
+    _resendTimer?.cancel();
+    setState(() => _resendRemaining = 24);
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+
+      if (_resendRemaining <= 1) {
+        timer.cancel();
+        setState(() => _resendRemaining = 0);
+        return;
+      }
+
+      setState(() => _resendRemaining--);
+    });
   }
 
   void _onOtpChanged(String value, int index) {
@@ -168,6 +192,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         controller.clear();
       }
 
+      _startResendTimer();
       FocusScope.of(context).requestFocus(_focusNodes.first);
       StatusSnackbar.show(
         context,
@@ -196,13 +221,28 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
     return AuthScaffold(
       heroIcon: Icons.pin_outlined,
-      eyebrow: 'Verification',
-      title: 'Enter your code',
-      subtitle:
-          'We sent a $_otpLength-digit code to ${widget.phoneNumber}. Enter it below to continue into GuardianNode.',
+      title: 'Enter the $_otpLength-digit code',
+      subtitle: 'We sent a code to ${widget.phoneNumber}.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Center(
+            child: Container(
+              width: 82,
+              height: 82,
+              decoration: BoxDecoration(
+                color: AppColors.trustBlueSurface,
+                borderRadius: AppRadii.card,
+                border: Border.all(color: AppColors.border),
+              ),
+              child: const Icon(
+                Icons.mark_chat_read_outlined,
+                color: AppColors.trustBlue,
+                size: 42,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
           if (showDebugHelper)
             InfoBanner(title: 'Debug helper', message: _debugHelperMessage!),
           if (showDebugHelper) const SizedBox(height: AppSpacing.lg),
@@ -254,27 +294,18 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               },
             ),
           ),
-          const SizedBox(height: AppSpacing.lg),
-          Row(
-            children: const [
-              Expanded(
-                child: StatTile(
-                  label: 'Security',
-                  value: 'OTP',
-                  helper: 'Phone verified',
-                  tone: StatusTone.info,
-                ),
-              ),
-              SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: StatTile(
-                  label: 'Length',
-                  value: 'Dynamic',
-                  helper: 'Backend controlled',
-                  tone: StatusTone.success,
-                ),
-              ),
-            ],
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            _resendRemaining > 0
+                ? 'Resend code in 00:${_resendRemaining.toString().padLeft(2, '0')}'
+                : "Didn't receive code?",
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: _resendRemaining > 0
+                  ? AppColors.engagementOrange
+                  : AppColors.textSecondary,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const SizedBox(height: AppSpacing.xl),
           PrimaryButton(
@@ -286,7 +317,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
           const SizedBox(height: AppSpacing.md),
           OutlineActionButton(
             text: 'Resend code',
-            onPressed: _isLoading ? null : _handleResendOtp,
+            onPressed: _isLoading || _resendRemaining > 0
+                ? null
+                : _handleResendOtp,
             icon: Icons.refresh_rounded,
           ),
         ],

@@ -3,12 +3,13 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/spacing.dart';
 import '../../../core/widgets/cards.dart';
+import '../../../core/widgets/guardian_components.dart';
 import '../../../core/widgets/placeholders.dart';
 import '../../../core/widgets/status_widgets.dart';
 import '../models/emergency_models.dart';
 import '../utils/formatters.dart';
 
-class DashboardCommunityTab extends StatelessWidget {
+class DashboardCommunityTab extends StatefulWidget {
   const DashboardCommunityTab({
     super.key,
     required this.nearbyAlerts,
@@ -23,90 +24,94 @@ class DashboardCommunityTab extends StatelessWidget {
   final VoidCallback onOpenMap;
 
   @override
+  State<DashboardCommunityTab> createState() => _DashboardCommunityTabState();
+}
+
+class _DashboardCommunityTabState extends State<DashboardCommunityTab> {
+  int _selectedTab = 0;
+
+  @override
   Widget build(BuildContext context) {
-    final primaryAlert = nearbyAlerts.isNotEmpty ? nearbyAlerts.first : null;
+    final alerts = switch (_selectedTab) {
+      1 =>
+        widget.nearbyAlerts
+            .where((alert) => !alert.status.toLowerCase().contains('resolved'))
+            .toList(),
+      2 =>
+        widget.nearbyAlerts
+            .where((alert) => alert.status.toLowerCase().contains('resolved'))
+            .toList(),
+      _ => widget.nearbyAlerts,
+    };
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: ListView(
-        padding: AppSpacing.screenPadding,
-        children: [
-          const SectionHeader(
-            title: 'Community support',
-            subtitle:
-                'Nearby people, support points, and response guidance come together here.',
-          ),
-          const SizedBox(height: AppSpacing.md),
-          const InfoBanner(
-            title: 'How community response works',
-            message:
-                'GuardianNode nearby users can open active alerts, follow route guidance, and move toward victims with better context.',
-          ),
-          const SizedBox(height: AppSpacing.md),
-          if (primaryAlert != null)
-            AlertCard(
-              title: formatEmergencyType(primaryAlert.emergencyType),
-              subtitle: primaryAlert.displayAddress,
-              distance: formatDistance(primaryAlert.distanceMeters),
-              time: formatRelativeTime(
-                primaryAlert.updatedAt ?? primaryAlert.createdAt,
+      backgroundColor: AppColors.cleanWhite,
+      body: SafeArea(
+        child: ListView(
+          padding: AppSpacing.screenPadding,
+          children: [
+            GuardianAppBar(
+              title: 'Emergency History',
+              leading: const SizedBox(
+                width: 48,
+                height: 48,
+                child: Icon(Icons.history_rounded, color: AppColors.trustBlue),
               ),
-              onTap: () => onOpenAlert(primaryAlert),
-              onAction: () => onOpenAlert(primaryAlert),
-            )
-          else
-            const EmptyState(
-              title: 'No response requests yet',
-              message:
-                  'Keep location ready and GuardianNode will surface nearby incidents as they happen.',
-              icon: Icons.people_outline_rounded,
+              actions: [
+                IconButton(
+                  tooltip: 'Profile',
+                  onPressed: widget.onOpenProfile,
+                  icon: const Icon(Icons.person_outline_rounded),
+                ),
+              ],
             ),
-          const SizedBox(height: AppSpacing.xl),
-          const SectionHeader(
-            title: 'Support points',
-            subtitle:
-                'Trusted places that can matter during urgent movement and handoff.',
-          ),
-          const SizedBox(height: AppSpacing.md),
-          const SafeZoneCard(
-            locationName: 'Mile 4 Police Station',
-            distance: '1.2 km',
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          const SafeZoneCard(
-            locationName: 'Regional Hospital Bamenda',
-            distance: '2.4 km',
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          const SectionHeader(
-            title: 'Quick actions',
-            subtitle: 'Keep your profile and routing readiness in shape.',
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
-              Expanded(
-                child: ActionTile(
-                  title: 'Profile',
-                  subtitle: 'Emergency contact and neighborhood',
-                  icon: Icons.account_circle_outlined,
-                  onTap: onOpenProfile,
+            const SizedBox(height: AppSpacing.md),
+            SegmentedTabs(
+              tabs: const ['All', 'Active', 'Resolved'],
+              selectedIndex: _selectedTab,
+              onChanged: (index) => setState(() => _selectedTab = index),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            if (alerts.isEmpty)
+              EmptyState(
+                title: _selectedTab == 2
+                    ? 'No resolved incidents'
+                    : 'No emergency history yet',
+                message:
+                    'Your alerts and nearby incidents will appear here once available from the current feed.',
+                icon: Icons.history_rounded,
+              )
+            else
+              ...alerts.map(
+                (alert) => Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                  child: AlertCard(
+                    title: formatEmergencyType(alert.emergencyType),
+                    subtitle: alert.displayAddress,
+                    distance: formatDistance(alert.distanceMeters),
+                    time: formatRelativeTime(
+                      alert.updatedAt ?? alert.createdAt,
+                    ),
+                    statusLabel: alert.status.toUpperCase(),
+                    tone: _toneForStatus(alert.status),
+                    onTap: () => widget.onOpenAlert(alert),
+                  ),
                 ),
               ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: ActionTile(
-                  title: 'Map',
-                  subtitle: 'Nearby incidents and your location',
-                  icon: Icons.map_outlined,
-                  accentColor: AppColors.engagementOrange,
-                  onTap: onOpenMap,
-                ),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
+  }
+
+  StatusTone _toneForStatus(String status) {
+    final normalized = status.toLowerCase();
+    if (normalized.contains('resolved')) {
+      return StatusTone.success;
+    }
+    if (normalized.contains('caution') || normalized.contains('pending')) {
+      return StatusTone.warning;
+    }
+    return StatusTone.action;
   }
 }

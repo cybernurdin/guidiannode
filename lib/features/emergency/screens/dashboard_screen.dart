@@ -18,6 +18,7 @@ import '../widgets/dashboard_community_tab.dart';
 import '../widgets/dashboard_home_tab.dart';
 import '../widgets/dashboard_map_tab.dart';
 import '../widgets/dashboard_sheets.dart';
+import '../../../core/widgets/guardian_components.dart';
 import 'active_sos_map_screen.dart';
 import 'responder_follow_screen.dart';
 
@@ -270,6 +271,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ).push(MaterialPageRoute<void>(builder: (_) => const ProfileScreen()));
   }
 
+  void _handleBottomNavigation(int index) {
+    if (index == 4) {
+      _openProfileScreen();
+      return;
+    }
+
+    setState(() => _currentIndex = index);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -317,31 +327,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
+      bottomNavigationBar: AppBottomNav(
         selectedIndex: _currentIndex,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.map_outlined),
-            selectedIcon: Icon(Icons.map_rounded),
-            label: 'Map',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.notification_important_outlined),
-            selectedIcon: Icon(Icons.notification_important_rounded),
-            label: 'Alerts',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.groups_outlined),
-            selectedIcon: Icon(Icons.groups_rounded),
-            label: 'Community',
-          ),
-        ],
-        onDestinationSelected: (index) => setState(() => _currentIndex = index),
+        onChanged: _handleBottomNavigation,
+        onSos: () =>
+            DashboardSheets.showEmergencyCategories(context, _triggerSos),
       ),
     );
   }

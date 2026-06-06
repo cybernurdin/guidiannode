@@ -8,7 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/radii.dart';
 import '../../../core/theme/spacing.dart';
-import '../../../core/widgets/cards.dart';
+import '../../../core/widgets/guardian_components.dart';
 import '../../../core/widgets/placeholders.dart';
 import '../../../core/widgets/status_widgets.dart';
 import '../models/emergency_models.dart';
@@ -251,36 +251,94 @@ class _ResponderFollowScreenState extends State<ResponderFollowScreen> {
               : Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    StatusBanner.action(
-                      title: 'Responder route active',
-                      message:
-                          'GuardianNode refreshes route guidance only when movement or elapsed time justifies it.',
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      decoration: BoxDecoration(
+                        color: AppColors.cleanWhite,
+                        borderRadius: AppRadii.card,
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 82,
+                            height: 82,
+                            decoration: BoxDecoration(
+                              color: AppColors.engagementOrange.withValues(
+                                alpha: 0.12,
+                              ),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.delivery_dining_rounded,
+                              color: AppColors.engagementOrange,
+                              size: 46,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          Text(
+                            'Help is on the way!',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.headlineSmall
+                                ?.copyWith(fontWeight: FontWeight.w900),
+                          ),
+                          const SizedBox(height: AppSpacing.xxs),
+                          Text(
+                            'Stay calm and stay safe.',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    ResponderCard(
+                    AlertDetailsCard(
                       title: formatEmergencyType(
                         followDetails.alert.emergencyType,
                       ),
-                      subtitle: followDetails.victimLocation.displayAddress,
-                      metrics: [
-                        StatTile(
-                          label: 'ETA',
-                          value: followDetails.route?.durationText ?? '--',
-                          tone: StatusTone.action,
+                      rows: {
+                        'ETA': followDetails.route?.durationText ?? '--',
+                        'Distance': followDetails.route?.distanceText ?? '--',
+                        'Updated': formatRelativeTime(
+                          followDetails.victimLocation.capturedAt,
                         ),
-                        StatTile(
-                          label: 'Distance',
-                          value: followDetails.route?.distanceText ?? '--',
-                          tone: StatusTone.info,
-                        ),
-                        StatTile(
-                          label: 'Updated',
-                          value: formatRelativeTime(
-                            followDetails.victimLocation.capturedAt,
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: AppRadii.card,
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: const Column(
+                        children: [
+                          AlertProgressStep(
+                            label: 'Alert Sent',
+                            status: 'Done',
+                            tone: StatusTone.success,
                           ),
-                          tone: StatusTone.success,
-                        ),
-                      ],
+                          SizedBox(height: AppSpacing.sm),
+                          AlertProgressStep(
+                            label: 'Accepted',
+                            status: 'Done',
+                            tone: StatusTone.success,
+                          ),
+                          SizedBox(height: AppSpacing.sm),
+                          AlertProgressStep(
+                            label: 'On the way',
+                            status: 'Live',
+                            tone: StatusTone.action,
+                          ),
+                          SizedBox(height: AppSpacing.sm),
+                          AlertProgressStep(
+                            label: 'Arrived',
+                            status: 'Pending',
+                            tone: StatusTone.warning,
+                          ),
+                        ],
+                      ),
                     ),
                     if (_isRefreshingRoute) ...[
                       const SizedBox(height: AppSpacing.sm),

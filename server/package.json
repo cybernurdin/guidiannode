@@ -1,24 +1,29 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "GuardianNode WhatsApp-authenticated emergency response API",
+  "main": "server.js",
   "scripts": {
+    "build": "node scripts/check-build.js",
     "start": "node server.js",
     "start:prod": "node -e \"process.env.NODE_ENV='production'; require('./server')\"",
     "check:env": "node -e \"require('./config/startupChecks').assertProductionReady(); console.log('Environment is ready')\"",
     "check:env:prod": "node -e \"process.env.NODE_ENV='production'; require('./config/startupChecks').assertProductionReady(); console.log('Production environment is ready')\"",
-    "test": "echo \"No automated tests configured yet\""
+    "test": "node --test"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.99.1",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.5.2",
     "jsonwebtoken": "^9.0.3",
     "zod": "^4.3.6"
   }

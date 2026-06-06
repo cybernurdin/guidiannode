@@ -5,6 +5,8 @@ import '../../../core/theme/colors.dart';
 import '../../../core/theme/radii.dart';
 import '../../../core/theme/spacing.dart';
 import '../../../core/widgets/buttons.dart';
+import '../../../core/widgets/cards.dart';
+import '../../../core/widgets/guardian_components.dart';
 import '../../../core/widgets/placeholders.dart';
 import '../../../core/widgets/status_widgets.dart';
 import '../models/emergency_models.dart';
@@ -104,15 +106,26 @@ class DashboardMapTab extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          StatusBadge(
-                            label: nearbyAlerts.isEmpty
-                                ? 'No live nearby alerts'
-                                : '${nearbyAlerts.length} live alerts',
-                            tone: nearbyAlerts.isEmpty
-                                ? StatusTone.info
-                                : StatusTone.error,
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: AppColors.cleanWhite.withValues(
+                                  alpha: 0.96,
+                                ),
+                                borderRadius: AppRadii.card,
+                                border: Border.all(color: AppColors.border),
+                              ),
+                              child: GuardianAppBar(
+                                title: 'Live Map',
+                                leading: IconButton(
+                                  tooltip: 'Menu',
+                                  onPressed: () {},
+                                  icon: const Icon(Icons.menu_rounded),
+                                ),
+                              ),
+                            ),
                           ),
-                          const Spacer(),
+                          const SizedBox(width: AppSpacing.sm),
                           IconButton.filledTonal(
                             onPressed: onShowLegend,
                             icon: const Icon(Icons.legend_toggle_rounded),
@@ -136,21 +149,58 @@ class DashboardMapTab extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              nearbyAlerts.isEmpty
-                                  ? 'Your live map is ready'
-                                  : nearbyAlerts.first.displayAddress,
-                              style: Theme.of(context).textTheme.titleLarge,
+                            Row(
+                              children: [
+                                Text(
+                                  nearbyAlerts.isEmpty
+                                      ? 'Live map ready'
+                                      : 'Active Alert',
+                                  style: Theme.of(context).textTheme.titleLarge
+                                      ?.copyWith(fontWeight: FontWeight.w900),
+                                ),
+                                const Spacer(),
+                                if (nearbyAlerts.isNotEmpty)
+                                  const StatusBadge(
+                                    label: 'LIVE',
+                                    tone: StatusTone.error,
+                                  ),
+                              ],
                             ),
                             const SizedBox(height: AppSpacing.xs),
                             Text(
                               nearbyAlerts.isEmpty
                                   ? currentPosition.displayAddress
-                                  : 'Active alert nearby. Open follow mode for route guidance.',
+                                  : nearbyAlerts.first.displayAddress,
                               style: Theme.of(context).textTheme.bodyMedium
                                   ?.copyWith(color: AppColors.textSecondary),
                             ),
                             const SizedBox(height: AppSpacing.md),
+                            if (nearbyAlerts.isNotEmpty)
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: StatTile(
+                                      label: 'Alerts',
+                                      value: '${nearbyAlerts.length}',
+                                      helper: 'Nearby',
+                                      tone: StatusTone.info,
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  Expanded(
+                                    child: StatTile(
+                                      label: 'Distance',
+                                      value: _formatDistance(
+                                        nearbyAlerts.first.distanceMeters,
+                                      ),
+                                      helper: 'From you',
+                                      tone: StatusTone.success,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            if (nearbyAlerts.isNotEmpty)
+                              const SizedBox(height: AppSpacing.md),
                             Row(
                               children: [
                                 Expanded(
@@ -185,5 +235,15 @@ class DashboardMapTab extends StatelessWidget {
         },
       ),
     );
+  }
+
+  String _formatDistance(double? meters) {
+    if (meters == null) {
+      return '--';
+    }
+    if (meters >= 1000) {
+      return '${(meters / 1000).toStringAsFixed(1)} km';
+    }
+    return '${meters.round()} m';
   }
 }

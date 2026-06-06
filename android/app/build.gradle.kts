@@ -1,4 +1,6 @@
 import java.util.Properties
+import java.util.Base64
+import org.gradle.api.GradleException
 
 plugins {
     id("com.android.application")
@@ -27,6 +29,37 @@ val hasReleaseSigning = listOf(
     "keyAlias",
     "keyPassword",
 ).all { key -> keystoreProperties.getProperty(key)?.isNotBlank() == true }
+
+fun readDartDefines(): Map<String, String> {
+    val rawDefines = providers.gradleProperty("dart-defines").orNull
+        ?: return emptyMap()
+
+    return rawDefines
+        .split(",")
+        .mapNotNull { encodedDefine ->
+            runCatching {
+                String(Base64.getDecoder().decode(encodedDefine))
+            }.getOrNull()
+        }
+        .mapNotNull { decodedDefine ->
+            val parts = decodedDefine.split("=", limit = 2)
+            if (parts.size == 2) parts[0] to parts[1] else null
+        }
+        .toMap()
+}
+
+val dartDefines = readDartDefines()
+val productionApiBaseUrl =
+    dartDefines["API_BASE_URL"]
+        ?: dartDefines["VITE_API_BASE_URL"]
+        ?: dartDefines["API_AUTH_BASE_URL"]
+        ?: ""
+
+fun looksLikeLocalApiUrl(value: String): Boolean {
+    val normalizedValue = value.lowercase()
+    return listOf("localhost", "127.0.0.1", "10.0.2.2", "192.168.", "10.0.", "172.16.")
+        .any { normalizedValue.contains(it) }
+}
 
 val googleMapsApiKey =
     System.getenv("GOOGLE_MAPS_API_KEY")
@@ -81,6 +114,45 @@ android {
             manifestPlaceholders["usesCleartextTraffic"] = "false"
             if (hasReleaseSigning) {
                 signingConfig = signingConfigs.getByName("release")
+            }
+        }
+    }
+}
+
+afterEvaluate {
+    tasks.matching { task -> task.name == "preReleaseBuild" }.configureEach {
+        doFirst {
+            if (!hasReleaseSigning) {
+                throw GradleException(
+                    "Release builds require android/key.properties with storeFile, " +
+                        "storePassword, keyAlias, and keyPassword. Create an upload " +
+                        "keystore before building for Play Store."
+                )
+            }
+
+            if (productionApiBaseUrl.isBlank()) {
+                throw GradleException(
+                    "Release builds require --dart-define=API_BASE_URL=https://<your-production-api>."
+                )
+            }
+
+            if (!productionApiBaseUrl.startsWith("https://")) {
+                throw GradleException(
+                    "Release API_BASE_URL must use HTTPS. Current value: $productionApiBaseUrl"
+                )
+            }
+
+            if (looksLikeLocalApiUrl(productionApiBaseUrl)) {
+                throw GradleException(
+                    "Release API_BASE_URL cannot point to localhost, emulator, or LAN addresses. " +
+                        "Current value: $productionApiBaseUrl"
+                )
+            }
+
+            if (googleMapsApiKey.isBlank()) {
+                throw GradleException(
+                    "Release builds require GOOGLE_MAPS_API_KEY in local.properties or the environment."
+                )
             }
         }
     }

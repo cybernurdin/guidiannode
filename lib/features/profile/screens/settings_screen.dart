@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import '../../../core/services/app_preferences.dart';
 import '../../../core/services/session_service.dart';
 import '../../../core/theme/colors.dart';
-import '../../../core/theme/radii.dart';
 import '../../../core/theme/spacing.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/cards.dart';
+import '../../../core/widgets/guardian_components.dart';
 import '../../../core/widgets/status_widgets.dart';
 import '../../auth/screens/legal_document_screen.dart';
 import '../../auth/screens/login_screen.dart';
@@ -62,28 +62,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  void _showUnsupportedPreference() {
+    // TODO: Connect this setting when backend/user preference support is defined.
+    StatusSnackbar.show(
+      context,
+      message: 'This setting is not connected yet.',
+      tone: StatusTone.info,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _coordinator,
       builder: (context, _) {
         return Scaffold(
-          backgroundColor: AppColors.background,
+          backgroundColor: AppColors.cleanWhite,
           appBar: AppBar(title: const Text('Settings')),
           body: ListView(
             padding: AppSpacing.screenPadding,
             children: [
-              const SectionHeader(
-                title: 'Alerts and permissions',
-                subtitle:
-                    'Tune how GuardianNode behaves on this device without touching the backend emergency contracts.',
-              ),
+              const SectionHeader(title: 'General'),
               const SizedBox(height: AppSpacing.md),
-              _SettingsTile(
+              SettingsTile(
                 icon: Icons.location_searching_rounded,
-                title: 'Location sharing',
+                title: 'Location Permissions',
                 subtitle: _coordinator.locationSharingEnabled
-                    ? 'Ready for routing and live SOS tracking.'
+                    ? 'Always'
                     : 'Off until you enable it.',
                 trailing: Switch.adaptive(
                   value: _coordinator.locationSharingEnabled,
@@ -95,11 +100,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
-              _SettingsTile(
+              SettingsTile(
                 icon: Icons.notifications_active_outlined,
-                title: 'Community banners',
-                subtitle:
-                    'Show in-app banners when nearby realtime alerts arrive.',
+                title: 'Notifications',
+                subtitle: _showCommunityBanners ? 'On' : 'Off',
                 trailing: Switch.adaptive(
                   value: _showCommunityBanners,
                   onChanged: (value) async {
@@ -116,10 +120,50 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
-              _SettingsTile(
+              SettingsTile(
+                icon: Icons.lock_outline_rounded,
+                title: 'Privacy & Data',
+                subtitle: 'Review how account and location data are handled.',
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const LegalDocumentScreen(
+                        title: 'Privacy Policy',
+                        content:
+                            'GuardianNode stores account details, emergency contact information, and emergency-related location updates to support SOS response, WhatsApp verification, and realtime routing.',
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              const SectionHeader(title: 'Preferences'),
+              const SizedBox(height: AppSpacing.md),
+              SettingsTile(
+                icon: Icons.language_rounded,
+                title: 'Language',
+                subtitle: 'English',
+                onTap: _showUnsupportedPreference,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              SettingsTile(
+                icon: Icons.light_mode_outlined,
+                title: 'App Theme',
+                subtitle: 'Light',
+                onTap: _showUnsupportedPreference,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              SettingsTile(
+                icon: Icons.text_fields_rounded,
+                title: 'Text Size',
+                subtitle: 'Medium',
+                onTap: _showUnsupportedPreference,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              SettingsTile(
                 icon: Icons.tips_and_updates_outlined,
-                title: 'Safety tips on dashboard',
-                subtitle: 'Keep short guidance visible in the home experience.',
+                title: 'Safety Tips',
+                subtitle: _showSafetyTips ? 'Visible on dashboard' : 'Hidden',
                 trailing: Switch.adaptive(
                   value: _showSafetyTips,
                   onChanged: (value) async {
@@ -136,40 +180,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               const SizedBox(height: AppSpacing.xl),
-              const SectionHeader(
-                title: 'Privacy and support',
-                subtitle:
-                    'Read how GuardianNode handles data, location, and appropriate emergency use.',
-              ),
+              const SectionHeader(title: 'Support'),
               const SizedBox(height: AppSpacing.md),
-              _SettingsTile(
-                icon: Icons.lock_outline_rounded,
-                title: 'Privacy policy',
-                subtitle: 'Review how account and location data are handled.',
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const LegalDocumentScreen(
-                        title: 'Privacy Policy',
-                        content:
-                            'GuardianNode stores account details, emergency contact information, and emergency-related location updates to support SOS response, OTP verification, and realtime routing.',
-                      ),
-                    ),
-                  );
-                },
+              SettingsTile(
+                icon: Icons.help_outline_rounded,
+                title: 'Help Center',
+                subtitle: 'Emergency use and account support.',
+                onTap: _showUnsupportedPreference,
               ),
               const SizedBox(height: AppSpacing.sm),
-              _SettingsTile(
-                icon: Icons.gavel_outlined,
-                title: 'Terms and conditions',
-                subtitle: 'Read platform responsibilities and acceptable use.',
+              SettingsTile(
+                icon: Icons.info_outline_rounded,
+                title: 'About GuardianNode',
+                subtitle: 'Bamenda emergency alert app.',
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (_) => const LegalDocumentScreen(
-                        title: 'Terms & Conditions',
+                        title: 'About GuardianNode',
                         content:
-                            'Use GuardianNode for genuine emergencies. Emergency response timing depends on network, community participation, and backend availability.',
+                            'GuardianNode connects residents of Bamenda to real-time alerts, nearby responders, and trusted emergency contacts.',
                       ),
                     ),
                   );
@@ -185,75 +215,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         );
       },
-    );
-  }
-}
-
-class _SettingsTile extends StatelessWidget {
-  const _SettingsTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    this.trailing,
-    this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Widget? trailing;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.surface,
-      borderRadius: AppRadii.card,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: AppRadii.card,
-        child: Ink(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: AppRadii.card,
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: const BoxDecoration(
-                  color: AppColors.trustBlueSurface,
-                  borderRadius: AppRadii.card,
-                ),
-                child: Icon(icon, color: AppColors.trustBlueDark),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: AppSpacing.xxs),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (trailing != null)
-                trailing!
-              else
-                const Icon(Icons.chevron_right_rounded),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

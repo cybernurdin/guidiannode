@@ -24,7 +24,7 @@ const requestOtpHandler = async (req, res) => {
     const response = await authService.startLoginOtp(req.validatedBody ?? req.body);
     return res.status(200).json(response);
   } catch (error) {
-    return handleErrorResponse(res, error, 'Request OTP Error');
+    return handleErrorResponse(res, error, 'Login Verification Error');
   }
 };
 
@@ -39,10 +39,23 @@ const verifyOtpHandler = async (req, res) => {
 
 const registerHandler = async (req, res) => {
   try {
-    const response = await authService.startRegistrationOtp(req.validatedBody ?? req.body);
+    const response = await authService.startRegistrationWhatsappVerification(
+      req.validatedBody ?? req.body
+    );
     return res.status(201).json(response);
   } catch (error) {
     return handleErrorResponse(res, error, 'Registration Error');
+  }
+};
+
+const startRegistrationVerificationHandler = async (req, res) => {
+  try {
+    const response = await authService.startRegistrationWhatsappVerification(
+      req.validatedBody ?? req.body
+    );
+    return res.status(201).json(response);
+  } catch (error) {
+    return handleErrorResponse(res, error, 'Registration Verification Error');
   }
 };
 
@@ -60,4 +73,5 @@ module.exports = {
   resendOtpHandler,
   verifyOtpHandler,
   registerHandler,
+  startRegistrationVerificationHandler,
 };

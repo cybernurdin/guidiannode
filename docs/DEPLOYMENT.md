@@ -1,100 +1,121 @@
-# GuardianNode Deployment
+# GuardianNode Production Deployment
 
-This checklist prepares the Flutter clients and Node API for a real deployment without committing secret values.
+GuardianNode consists of a Flutter client, a Node/Express API, and Supabase. Authentication uses inbound WhatsApp messages; Twilio is not required.
 
-## Backend API
+## Backend
 
-Required environment variables:
+Deploy `server/` to Render, Railway, or a Node 20+ VPS. The process must remain available to receive Meta webhooks.
+
+```bash
+npm ci --omit=dev
+npm run check:env:prod
+npm start
+```
+
+Use `server/.env.production.example` as the environment-variable template. Required production values include:
 
 ```env
 NODE_ENV=production
 PORT=3000
+APP_BASE_URL=https://app.yourdomain.com
+CORS_ORIGIN=https://app.yourdomain.com
 SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-GOOGLE_MAPS_SERVER_API_KEY=your_google_server_key
-JWT_SECRET=replace_with_a_long_random_secret
-CORS_ORIGIN=https://your-web-app.example.com
-SMS_PROVIDER=twilio
-TWILIO_ACCOUNT_SID=your_twilio_account_sid
-TWILIO_AUTH_TOKEN=your_twilio_auth_token
-TWILIO_FROM_NUMBER=+15551234567
+SUPABASE_SERVICE_ROLE_KEY=replace_in_host_secret_store
+GOOGLE_MAPS_SERVER_API_KEY=replace_in_host_secret_store
+JWT_SECRET=replace_with_at_least_32_random_characters
+META_APP_ID=replace_with_meta_app_id
+META_BUSINESS_ID=replace_with_meta_business_id
+WHATSAPP_API_VERSION=v22.0
+WHATSAPP_TARGET_NUMBER=237657262038
+WHATSAPP_PHONE_NUMBER_ID=replace_with_phone_number_id
+WHATSAPP_BUSINESS_ACCOUNT_ID=replace_with_waba_id
+WHATSAPP_VERIFY_TOKEN=replace_with_a_private_random_verify_token
+WHATSAPP_APP_SECRET=replace_with_meta_app_secret
+WEBHOOK_URL=https://guidiannode-production.up.railway.app/webhook
 DEBUG_AUTH_MODE=false
-AUTO_VERIFY_DEBUG_OTP=false
-OTP_EXPIRES_MINUTES=10
 ```
 
-Useful commands from `server/`:
+`DATABASE_URL` and `SESSION_SECRET` are supported in the environment templates. This application currently accesses the database through Supabase; `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are therefore required. `SESSION_SECRET` can be used instead of `JWT_SECRET`. `WHATSAPP_ACCESS_TOKEN` is optional for this inbound-only flow.
 
-```bash
-npm install
-npm run check:env:prod
-npm run start:prod
-```
-
-Health endpoints:
+Health checks:
 
 ```text
-GET /health
-GET /ready
+GET https://guidiannode-production.up.railway.app/health
+GET https://guidiannode-production.up.railway.app/ready
 ```
 
-Notes:
-
-- `DEBUG_AUTH_MODE=true` is blocked in production.
-- `SMS_PROVIDER=twilio` is required in production so OTP delivery works.
-- `CORS_ORIGIN` accepts a comma-separated list when multiple clients need API access.
-- Keep `server/.env` local. It is ignored going forward; remove it from source control before publishing this repository.
-
-## Flutter Runtime Defines
-
-Use explicit deployment values for every release build:
-
-```bash
-flutter build web --release \
-  --dart-define=API_BASE_URL=https://api.your-domain.example \
-  --dart-define=GOOGLE_MAPS_API_KEY=your_web_google_maps_key \
-  --dart-define=SUPABASE_URL=https://your-project.supabase.co \
-  --dart-define=SUPABASE_ANON_KEY=your_publishable_or_anon_key \
-  --dart-define=SHOW_DEBUG_OTP_HELPER=false
-```
-
-```bash
-flutter build appbundle --release \
-  --dart-define=API_BASE_URL=https://api.your-domain.example \
-  --dart-define=GOOGLE_MAPS_API_KEY=your_android_google_maps_key \
-  --dart-define=SUPABASE_URL=https://your-project.supabase.co \
-  --dart-define=SUPABASE_ANON_KEY=your_publishable_or_anon_key \
-  --dart-define=SHOW_DEBUG_OTP_HELPER=false
-```
-
-For iOS, put the iOS Google Maps key in `ios/Flutter/Secrets.xcconfig` or provide it through CI/Xcode build settings:
-
-```xcconfig
-GOOGLE_MAPS_API_KEY=your_ios_google_maps_api_key
-```
-
-## Android Release Signing
-
-Create `android/key.properties` using `android/key.properties.example` as the shape. The file is ignored so passwords and keystores stay local.
-
-```properties
-storeFile=../upload-keystore.jks
-storePassword=replace_with_store_password
-keyAlias=upload
-keyPassword=replace_with_key_password
-```
-
-The Android application id is `com.guardiannode.app`. Release builds no longer use the debug signing config.
-
-## Supabase Schema
-
-Apply the SQL files in `server/sql/` before first deployment, especially:
+Public Meta app publishing pages:
 
 ```text
-create_otp_sessions.sql
-create_live_locations.sql
-add_enum_value.sql
-reload_schema_cache.sql
+https://guidiannode-production.up.railway.app/privacy-policy
+https://guidiannode-production.up.railway.app/data-deletion
 ```
 
-Then verify `/ready` and run through registration, OTP, SOS creation, live location, nearby alerts, responder follow, and SOS resolution.
+The Docker deployment definition is in `server/Dockerfile`; `render.yaml` is a Render starting point.
+
+For Railway, configure the backend service with:
+
+```text
+Root Directory: /server
+Config File Path: /server/railway.json
+Healthcheck Path: /health
+```
+
+Paste `server/railway.variables.example.json` into Railway's Variables Raw Editor, then replace every placeholder before deploying.
+
+## Database
+
+Apply these scripts in Supabase SQL Editor before directing production traffic:
+
+```text
+server/sql/create_otp_sessions.sql
+server/sql/add_enum_value.sql
+server/sql/add_whatsapp_verification_columns.sql
+server/sql/add_whatsapp_verification_index.sql
+server/sql/reload_schema_cache.sql
+```
+
+The migrations preserve old OTP columns and add nullable WhatsApp fields plus `users.phone_verified`.
+
+## Meta Webhook
+
+Configure the WhatsApp product webhook callback as:
+
+```text
+https://guidiannode-production.up.railway.app/webhook
+```
+
+Use the exact production value of `WHATSAPP_VERIFY_TOKEN`. Subscribe to the `messages` field. Production POST requests require a valid `X-Hub-Signature-256` generated with `WHATSAPP_APP_SECRET`.
+
+Do not use ngrok for production. Tunnel domains are temporary development endpoints.
+
+## Flutter Web
+
+Create `config/flutter.production.json` from `config/flutter.production.example.json`, then build:
+
+```bash
+flutter pub get
+flutter analyze
+flutter test
+flutter build web --release --dart-define-from-file=config/flutter.production.json
+```
+
+Deploy `build/web` to Firebase Hosting, Netlify, or Vercel with SPA rewrites to `index.html`. `firebase.json` contains a Firebase Hosting configuration.
+
+Flutter compile-time values use `API_BASE_URL` and `WHATSAPP_TARGET_NUMBER`. The equivalent `VITE_API_BASE_URL` and `VITE_WHATSAPP_TARGET_NUMBER` aliases are also accepted for deployment compatibility.
+
+## Android
+
+Create an upload keystore and `android/key.properties` before building:
+
+```powershell
+keytool -genkeypair -v -keystore android/upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+Copy-Item android/key.properties.example android/key.properties
+flutter build appbundle --release --dart-define-from-file=config/flutter.production.json
+```
+
+Keep the keystore, passwords, and `key.properties` outside source control. The expected bundle is `build/app/outputs/bundle/release/app-release.aab`.
+
+## Credential Safety
+
+Never commit `.env`, access tokens, service-role keys, app secrets, or keystores. If a credential has ever been committed or pasted into a shared channel, rotate it before deployment and remove it from Git history where appropriate.

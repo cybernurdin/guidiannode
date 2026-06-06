@@ -3,7 +3,7 @@
 ## Audit Summary
 
 - Existing business logic is concentrated in `ApiService`, `ProfileApiService`, `EmergencyApiService`, `EmergencyCoordinator`, and `SupabaseRealtimeService`.
-- The app already supports OTP authentication, profile update, SOS creation, live location sync, nearby alerts, realtime subscriptions, and responder route follow mode.
+- The app already supports inbound WhatsApp authentication, profile update, SOS creation, live location sync, nearby alerts, realtime subscriptions, and responder route follow mode.
 - Missing quality areas were mostly in presentation: inconsistent spacing, repeated styles, limited state treatment, weak hierarchy, and no durable onboarding/settings shell.
 - No police or admin Flutter interfaces were present in the repository during the audit, so the redesign focuses on resident and community-responder flows.
 

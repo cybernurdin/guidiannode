@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/services/app_preferences.dart';
 import '../../../core/services/session_service.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/spacing.dart';
+import '../../../core/widgets/guardian_components.dart';
 import '../../emergency/screens/dashboard_screen.dart';
 import 'login_screen.dart';
 import 'onboarding_screen.dart';
@@ -82,65 +82,16 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF070B19), // Ultra deep modern slate navy
+      backgroundColor: AppColors.trustBlue,
       body: Stack(
         children: [
-          // Positioned mesh radial gradient blobs
           Positioned(
-            top: -120,
-            right: -80,
-            child: Container(
-              width: 340,
-              height: 340,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppColors.trustBlue.withValues(alpha: 0.45),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 190,
+            child: CustomPaint(painter: _BamendaSilhouettePainter()),
           ),
-          Positioned(
-            bottom: -100,
-            left: -100,
-            child: Container(
-              width: 380,
-              height: 380,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    const Color(
-                      0xFF312E81,
-                    ).withValues(alpha: 0.55), // Indigo 900
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            top: 240,
-            left: -40,
-            child: Container(
-              width: 280,
-              height: 280,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppColors.error.withValues(alpha: 0.14),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Central animated content
           SafeArea(
             child: FadeTransition(
               opacity: _fadeAnimation,
@@ -154,27 +105,35 @@ class _SplashScreenState extends State<SplashScreen>
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Spacer(),
-                      const _SplashMark(),
-                      const SizedBox(height: AppSpacing.xl),
+                      const GuardianLogo(
+                        size: 118,
+                        showWordmark: true,
+                        onDark: true,
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
                       Text(
-                        'GuardianNode',
+                        'Help is one tap away.\nStronger together,\nsafer Bamenda.',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: AppColors.cleanWhite,
-                          fontSize: 36,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -0.5,
+                          fontWeight: FontWeight.w800,
+                          height: 1.26,
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        'Real-time protection & emergency routing',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
-                          color: AppColors.cleanWhite.withValues(alpha: 0.75),
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                          letterSpacing: 0.1,
+                      const SizedBox(height: AppSpacing.xl),
+                      Container(
+                        width: 128,
+                        height: 3,
+                        decoration: const BoxDecoration(
+                          borderRadius: BorderRadius.all(Radius.circular(99)),
+                          gradient: LinearGradient(
+                            colors: [
+                              AppColors.trustBlueDark,
+                              AppColors.safetyGreen,
+                              AppColors.engagementOrange,
+                              AppColors.communityYellow,
+                            ],
+                          ),
                         ),
                       ),
                       const Spacer(),
@@ -188,15 +147,13 @@ class _SplashScreenState extends State<SplashScreen>
                       ),
                       const SizedBox(height: AppSpacing.md),
                       Text(
-                        'Connecting you to Bamenda safety network',
-                        style: GoogleFonts.inter(
-                          color: AppColors.cleanWhite.withValues(alpha: 0.6),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.1,
+                        "Bamenda, We've Got You.",
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.cleanWhite.withValues(alpha: 0.78),
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.md),
+                      const SizedBox(height: AppSpacing.xxl),
                     ],
                   ),
                 ),
@@ -209,35 +166,69 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-class _SplashMark extends StatelessWidget {
-  const _SplashMark();
-
+class _BamendaSilhouettePainter extends CustomPainter {
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 104,
-      height: 104,
-      decoration: BoxDecoration(
-        color: AppColors.cleanWhite.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: AppColors.cleanWhite.withValues(alpha: 0.22),
-          width: 1.5,
+  void paint(Canvas canvas, Size size) {
+    final mountainPaint = Paint()
+      ..color = AppColors.cleanWhite.withValues(alpha: 0.12)
+      ..style = PaintingStyle.fill;
+    final townPaint = Paint()
+      ..color = AppColors.cleanWhite.withValues(alpha: 0.18)
+      ..style = PaintingStyle.fill;
+    final monumentPaint = Paint()
+      ..color = AppColors.cleanWhite.withValues(alpha: 0.28)
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+
+    final mountains = Path()
+      ..moveTo(0, size.height * 0.72)
+      ..quadraticBezierTo(
+        size.width * 0.22,
+        size.height * 0.34,
+        size.width * 0.42,
+        size.height * 0.68,
+      )
+      ..quadraticBezierTo(
+        size.width * 0.62,
+        size.height * 0.28,
+        size.width,
+        size.height * 0.58,
+      )
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(mountains, mountainPaint);
+
+    for (var i = 0; i < 7; i++) {
+      final left = size.width * (0.18 + i * 0.09);
+      final top = size.height * (0.72 - (i.isEven ? 0.04 : 0));
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(left, top, size.width * 0.055, size.height * 0.12),
+          const Radius.circular(3),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.trustBlue.withValues(alpha: 0.22),
-            blurRadius: 36,
-            spreadRadius: 2,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: const Icon(
-        Icons.shield_moon_outlined,
-        color: AppColors.cleanWhite,
-        size: 52,
-      ),
+        townPaint,
+      );
+    }
+
+    final center = Offset(size.width * 0.5, size.height * 0.48);
+    canvas.drawLine(
+      Offset(center.dx, center.dy + 54),
+      Offset(center.dx, center.dy - 20),
+      monumentPaint,
+    );
+    canvas.drawLine(
+      Offset(center.dx - 17, center.dy + 54),
+      Offset(center.dx + 17, center.dy + 54),
+      monumentPaint,
+    );
+    canvas.drawLine(
+      Offset(center.dx, center.dy - 20),
+      Offset(center.dx + 11, center.dy - 5),
+      monumentPaint,
     );
   }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

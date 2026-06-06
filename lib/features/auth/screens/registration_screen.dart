@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/services/api_service.dart';
 import '../../../core/services/session_service.dart';
@@ -15,7 +18,6 @@ import '../../emergency/services/emergency_coordinator.dart';
 import '../utils/post_auth_flow.dart';
 import '../widgets/auth_scaffold.dart';
 import 'legal_document_screen.dart';
-import 'otp_verification_screen.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key, this.prefillLocationEnabled = false});
@@ -43,7 +45,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   bool _enableLocationSharing = false;
   bool _agreedToTerms = false;
   bool _isLoading = false;
+  bool _isOpeningWhatsapp = false;
+  bool _isPollingVerification = false;
   PositionSnapshot? _locationSnapshot;
+  Timer? _verificationPollTimer;
+  _WhatsappVerification? _whatsappVerification;
+  String? _verificationMessage;
 
   @override
   void initState() {
@@ -73,6 +80,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   @override
   void dispose() {
+    _verificationPollTimer?.cancel();
     _termsRecognizer.dispose();
     _privacyRecognizer.dispose();
     _nameController.dispose();
@@ -127,35 +135,32 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       return;
     }
 
+    await _requestRegistrationVerification();
+  }
+
+  Map<String, dynamic> _buildRegistrationData() {
+    return {
+      'full_name': _nameController.text.trim(),
+      'phone_number': _phoneController.text.trim(),
+      'quarter': _quarterController.text.trim(),
+      'location_permission': _enableLocationSharing,
+      'latitude': _locationSnapshot?.latitude,
+      'longitude': _locationSnapshot?.longitude,
+      'emergency_contact': {
+        'contact_name': _contactNameController.text.trim(),
+        'phone_number': _contactPhoneController.text.trim(),
+        'relationship': _relationship,
+      },
+    };
+  }
+
+  Future<void> _requestRegistrationVerification() async {
     setState(() => _isLoading = true);
 
     try {
-      final phoneNumber = _phoneController.text.trim();
-
-      final registrationData = {
-        'full_name': _nameController.text.trim(),
-        'phone_number': phoneNumber,
-        'quarter': _quarterController.text.trim(),
-        'location_permission': _enableLocationSharing,
-        'latitude': _locationSnapshot?.latitude,
-        'longitude': _locationSnapshot?.longitude,
-        'emergency_contact': {
-          'contact_name': _contactNameController.text.trim(),
-          'phone_number': _contactPhoneController.text.trim(),
-          'relationship': _relationship,
-        },
-      };
-
-      final response = await ApiService.register(
-        registrationData: registrationData,
+      final response = await ApiService.startRegistrationVerification(
+        registrationData: _buildRegistrationData(),
       );
-      final debugPayload = response['debug'];
-      final debugHelperMessage = debugPayload is Map
-          ? debugPayload['helper_message']?.toString()
-          : null;
-      final otpLength = response['otp_length'] is num
-          ? (response['otp_length'] as num).toInt()
-          : int.tryParse(response['otp_length']?.toString() ?? '') ?? 6;
 
       if (!mounted) {
         return;
@@ -174,23 +179,25 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         return;
       }
 
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => OtpVerificationScreen(
-            phoneNumber: phoneNumber,
-            otpSessionId: response['otp_session_id']?.toString(),
-            debugHelperMessage: debugHelperMessage,
-            otpLength: otpLength > 0 ? otpLength : 6,
-            onVerified: (session) {
-              SessionService.setSession(session);
-              PostAuthFlow.routeAfterVerification(
-                context,
-                bootstrapLocationSharing: _enableLocationSharing,
-              );
-            },
-          ),
-        ),
+      final verification = _WhatsappVerification.fromResponse(response);
+
+      if (verification == null) {
+        StatusSnackbar.show(
+          context,
+          message: 'The backend did not return a WhatsApp verification link.',
+          tone: StatusTone.error,
+        );
+        return;
+      }
+
+      setState(
+        () {
+          _whatsappVerification = verification;
+          _verificationMessage =
+              'Waiting for your WhatsApp verification message.';
+        },
       );
+      _startVerificationPolling();
     } catch (error) {
       if (!mounted) {
         return;
@@ -205,8 +212,265 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     }
   }
 
+  void _startVerificationPolling() {
+    _verificationPollTimer?.cancel();
+    _pollVerificationStatus();
+    _verificationPollTimer = Timer.periodic(
+      const Duration(seconds: 3),
+      (_) => _pollVerificationStatus(),
+    );
+  }
+
+  Future<void> _pollVerificationStatus() async {
+    final verification = _whatsappVerification;
+
+    if (verification == null || _isPollingVerification) {
+      return;
+    }
+
+    _isPollingVerification = true;
+
+    try {
+      final response = await ApiService.getVerificationStatus(
+        verification.verificationId,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      if (response['success'] != true) {
+        setState(() {
+          _verificationMessage =
+              response['message']?.toString() ??
+              'Verification status could not be refreshed.';
+        });
+        return;
+      }
+
+      final status = response['status']?.toString() ?? 'pending';
+      final verified = response['verified'] == true || status == 'verified';
+
+      if (verified) {
+        _verificationPollTimer?.cancel();
+        final sessionPayload = response['session'];
+
+        if (sessionPayload is Map) {
+          SessionService.setSession(
+            Map<String, dynamic>.from(sessionPayload),
+          );
+          PostAuthFlow.routeAfterVerification(
+            context,
+            bootstrapLocationSharing: _enableLocationSharing,
+          );
+          return;
+        }
+
+        StatusSnackbar.show(
+          context,
+          message: 'Verification completed. Please sign in to continue.',
+        );
+        return;
+      }
+
+      if (status == 'expired') {
+        _verificationPollTimer?.cancel();
+        setState(() {
+          _whatsappVerification = verification.copyWith(status: 'expired');
+          _verificationMessage =
+              'Your verification link has expired. Please request a new one.';
+        });
+        return;
+      }
+
+      setState(() {
+        _whatsappVerification = verification.copyWith(status: status);
+        _verificationMessage =
+            'Waiting for your WhatsApp verification message.';
+      });
+    } finally {
+      _isPollingVerification = false;
+    }
+  }
+
+  Future<void> _openWhatsappVerification() async {
+    final verification = _whatsappVerification;
+
+    if (verification == null) {
+      return;
+    }
+
+    setState(() => _isOpeningWhatsapp = true);
+
+    try {
+      final uri = Uri.parse(verification.whatsappUrl);
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (!launched && mounted) {
+        StatusSnackbar.show(
+          context,
+          message: 'WhatsApp could not be opened on this device.',
+          tone: StatusTone.error,
+        );
+      }
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      StatusSnackbar.show(
+        context,
+        message: 'WhatsApp could not be opened: $error',
+        tone: StatusTone.error,
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isOpeningWhatsapp = false);
+      }
+    }
+  }
+
+  void _editRegistrationDetails() {
+    _verificationPollTimer?.cancel();
+    setState(() {
+      _whatsappVerification = null;
+      _verificationMessage = null;
+    });
+  }
+
+  Widget _buildWhatsappVerificationPanel(
+    BuildContext context,
+    _WhatsappVerification verification,
+  ) {
+    final isExpired = verification.status == 'expired';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Center(
+          child: Container(
+            width: 86,
+            height: 86,
+            decoration: BoxDecoration(
+              color: isExpired
+                  ? AppColors.communityYellowSurface
+                  : AppColors.safetyGreenSurface,
+              borderRadius: AppRadii.card,
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Icon(
+              isExpired
+                  ? Icons.schedule_rounded
+                  : Icons.mark_chat_read_outlined,
+              color: isExpired
+                  ? const Color(0xFF8A5A00)
+                  : AppColors.safetyGreen,
+              size: 44,
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        Text(
+          'Tap the button below to send your verification message on WhatsApp. Once sent, this page will update automatically.',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w700,
+            height: 1.45,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: AppRadii.card,
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            children: [
+              Text(
+                'Verification message',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              SelectableText(
+                verification.token,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: AppColors.trustBlueDark,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        InfoBanner(
+          title: 'Link expiry',
+          message: 'This verification link expires in 10 minutes.',
+        ),
+        if (_verificationMessage != null) ...[
+          const SizedBox(height: AppSpacing.md),
+          StatusBanner(
+            title: isExpired ? 'Expired' : 'Waiting for WhatsApp',
+            message: _verificationMessage!,
+            tone: isExpired ? StatusTone.warning : StatusTone.info,
+          ),
+        ],
+        const SizedBox(height: AppSpacing.xl),
+        PrimaryButton(
+          text: 'Verify via WhatsApp',
+          icon: Icons.chat_rounded,
+          isLoading: _isOpeningWhatsapp,
+          onPressed: isExpired ? null : _openWhatsappVerification,
+        ),
+        const SizedBox(height: AppSpacing.md),
+        if (isExpired) ...[
+          OutlineActionButton(
+            text: 'Request a new link',
+            icon: Icons.refresh_rounded,
+            onPressed: _isLoading ? null : _requestRegistrationVerification,
+          ),
+          const SizedBox(height: AppSpacing.md),
+        ],
+        OutlineActionButton(
+          text: 'Edit details',
+          icon: Icons.edit_outlined,
+          onPressed: _isLoading ? null : _editRegistrationDetails,
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final whatsappVerification = _whatsappVerification;
+
+    if (whatsappVerification != null) {
+      final isExpired = whatsappVerification.status == 'expired';
+
+      return AuthScaffold(
+        heroIcon: Icons.chat_bubble_outline_rounded,
+        eyebrow: 'WhatsApp verification',
+        title: 'Verify with WhatsApp',
+        subtitle:
+            'GuardianNode will activate your emergency profile as soon as your message reaches the business number.',
+        badge: AuthHeroBadge(
+          label: isExpired ? 'Link expired' : 'Waiting on WhatsApp',
+          tone: isExpired ? StatusTone.warning : StatusTone.action,
+        ),
+        child: _buildWhatsappVerificationPanel(context, whatsappVerification),
+      );
+    }
+
     return AuthScaffold(
       heroIcon: Icons.person_add_alt_1_rounded,
       eyebrow: 'Create your emergency profile',
@@ -224,7 +488,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           children: [
             const CommunityUpdateCard(
               updateText:
-                  'Your registration still uses the existing backend, OTP session, and Supabase-integrated emergency flow.',
+                  'GuardianNode protects your emergency profile until your WhatsApp verification is complete.',
             ),
             const SizedBox(height: AppSpacing.lg),
             Text('Your details', style: Theme.of(context).textTheme.titleLarge),
@@ -405,7 +669,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                             ),
                             const TextSpan(
                               text:
-                                  ' for emergency communication, OTP verification, and profile storage.',
+                                  ' for emergency communication, WhatsApp verification, and profile storage.',
                             ),
                           ],
                         ),
@@ -434,6 +698,61 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _WhatsappVerification {
+  const _WhatsappVerification({
+    required this.verificationId,
+    required this.token,
+    required this.expiresAt,
+    required this.whatsappUrl,
+    this.status = 'pending',
+  });
+
+  final String verificationId;
+  final String token;
+  final String expiresAt;
+  final String whatsappUrl;
+  final String status;
+
+  static _WhatsappVerification? fromResponse(Map<String, dynamic> response) {
+    final verificationId =
+        response['verificationId']?.toString() ??
+        response['otp_session_id']?.toString();
+    final token = response['token']?.toString();
+    final expiresAt =
+        response['expiresAt']?.toString() ?? response['expires_at']?.toString();
+    final whatsappUrl = response['whatsappUrl']?.toString();
+
+    if (verificationId == null ||
+        verificationId.isEmpty ||
+        token == null ||
+        token.isEmpty ||
+        expiresAt == null ||
+        expiresAt.isEmpty ||
+        whatsappUrl == null ||
+        whatsappUrl.isEmpty) {
+      return null;
+    }
+
+    return _WhatsappVerification(
+      verificationId: verificationId,
+      token: token,
+      expiresAt: expiresAt,
+      whatsappUrl: whatsappUrl,
+      status: response['status']?.toString() ?? 'pending',
+    );
+  }
+
+  _WhatsappVerification copyWith({String? status}) {
+    return _WhatsappVerification(
+      verificationId: verificationId,
+      token: token,
+      expiresAt: expiresAt,
+      whatsappUrl: whatsappUrl,
+      status: status ?? this.status,
     );
   }
 }

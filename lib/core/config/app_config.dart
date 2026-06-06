@@ -7,7 +7,10 @@ class AppConfig {
       '$_androidEmulatorApiBaseUrl/api/auth';
   static const String _apiBaseUrlOverride = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: '',
+    defaultValue: String.fromEnvironment(
+      'VITE_API_BASE_URL',
+      defaultValue: '',
+    ),
   );
   static const String _apiAuthBaseUrlOverride = String.fromEnvironment(
     'API_AUTH_BASE_URL',
@@ -28,6 +31,13 @@ class AppConfig {
     'SUPABASE_ANON_KEY',
     defaultValue: String.fromEnvironment(
       'VITE_SUPABASE_ANON_KEY',
+      defaultValue: '',
+    ),
+  );
+  static const String _whatsappTargetNumber = String.fromEnvironment(
+    'WHATSAPP_TARGET_NUMBER',
+    defaultValue: String.fromEnvironment(
+      'VITE_WHATSAPP_TARGET_NUMBER',
       defaultValue: '',
     ),
   );
@@ -78,6 +88,8 @@ class AppConfig {
   static String get supabaseUrl => _supabaseUrl;
 
   static String get supabaseAnonKey => _supabaseAnonKey;
+
+  static String get whatsappTargetNumber => _whatsappTargetNumber;
 
   static bool get hasSupabaseRealtimeConfig =>
       _supabaseUrl.isNotEmpty && _supabaseAnonKey.isNotEmpty;

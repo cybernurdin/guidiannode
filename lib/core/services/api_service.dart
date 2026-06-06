@@ -7,7 +7,16 @@ class ApiService {
   static String get baseUrl => AppConfig.apiAuthBaseUrl;
 
   static Future<Map<String, dynamic>> requestOtp(String phoneNumber) async {
-    return _post('/request-otp', body: {'phone_number': phoneNumber});
+    return startLoginVerification(phoneNumber);
+  }
+
+  static Future<Map<String, dynamic>> startLoginVerification(
+    String phoneNumber,
+  ) async {
+    return _post(
+      '/login/start-verification',
+      body: {'phone_number': phoneNumber},
+    );
   }
 
   static Future<Map<String, dynamic>> verifyOtp({
@@ -29,7 +38,19 @@ class ApiService {
   static Future<Map<String, dynamic>> register({
     required Map<String, dynamic> registrationData,
   }) async {
-    return _post('/register', body: registrationData);
+    return startRegistrationVerification(registrationData: registrationData);
+  }
+
+  static Future<Map<String, dynamic>> startRegistrationVerification({
+    required Map<String, dynamic> registrationData,
+  }) async {
+    return _post('/register/start-verification', body: registrationData);
+  }
+
+  static Future<Map<String, dynamic>> getVerificationStatus(
+    String verificationId,
+  ) async {
+    return _get('/api/verification/status/$verificationId');
   }
 
   static Future<Map<String, dynamic>> resendOtp({
@@ -59,20 +80,36 @@ class ApiService {
         body: jsonEncode(body),
       );
 
-      final decodedBody = response.body.isEmpty
-          ? <String, dynamic>{}
-          : jsonDecode(response.body) as Map<String, dynamic>;
-
-      return {
-        'success': response.statusCode >= 200 && response.statusCode < 300
-            ? (decodedBody['success'] ?? true)
-            : (decodedBody['success'] ?? false),
-        'status_code': response.statusCode,
-        ...decodedBody,
-      };
+      return _decodeResponse(response);
     } catch (e) {
       return {'success': false, 'message': _buildRequestErrorMessage(e, uri)};
     }
+  }
+
+  static Future<Map<String, dynamic>> _get(String path) async {
+    final uri = Uri.parse('${AppConfig.apiBaseUrl}$path');
+
+    try {
+      final response = await http.get(uri, headers: _buildHeaders());
+
+      return _decodeResponse(response);
+    } catch (e) {
+      return {'success': false, 'message': _buildRequestErrorMessage(e, uri)};
+    }
+  }
+
+  static Map<String, dynamic> _decodeResponse(http.Response response) {
+    final decodedBody = response.body.isEmpty
+        ? <String, dynamic>{}
+        : jsonDecode(response.body) as Map<String, dynamic>;
+
+    return {
+      'success': response.statusCode >= 200 && response.statusCode < 300
+          ? (decodedBody['success'] ?? true)
+          : (decodedBody['success'] ?? false),
+      'status_code': response.statusCode,
+      ...decodedBody,
+    };
   }
 
   static Map<String, String> _buildHeaders() {

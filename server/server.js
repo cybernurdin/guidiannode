@@ -7,13 +7,17 @@ const {
   buildReadinessSnapshot,
 } = require('./config/startupChecks');
 const { logAuthModeBanner } = require('./config/authConfig');
+const { checkDatabaseReadiness } = require('./config/databaseReadiness');
 
 assertProductionReady();
 
 const authRoutes = require('./routes/authRoutes');
 const alertRoutes = require('./routes/alertRoutes');
 const locationRoutes = require('./routes/locationRoutes');
+const legalRoutes = require('./routes/legalRoutes');
 const profileRoutes = require('./routes/profileRoutes');
+const verificationRoutes = require('./routes/verificationRoutes');
+const webhookRoutes = require('./routes/webhookRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -36,7 +40,12 @@ app.use((req, res, next) => {
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      if (process.env.NODE_ENV !== 'production' && allowedOrigins.length === 0) {
         callback(null, true);
         return;
       }
@@ -45,14 +54,24 @@ app.use(
     },
   })
 );
-app.use(express.json({ limit: jsonBodyLimit }));
+app.use(
+  express.json({
+    limit: jsonBodyLimit,
+    verify(req, res, buffer) {
+      req.rawBody = Buffer.from(buffer);
+    },
+  })
+);
 
 // Routes
+app.use(legalRoutes);
+app.use('/webhook', webhookRoutes);
 // SUPER BACKEND PROMPT specifies /api/auth/... for these endpoints
 app.use('/api/auth', authRoutes);
 app.use('/api/location', locationRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/verification', verificationRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -64,11 +83,25 @@ app.get('/health', (req, res) => {
   });
 });
 
-app.get('/ready', (req, res) => {
-  res.status(200).json({
-    status: 'ready',
-    ...buildReadinessSnapshot(),
-  });
+app.get('/ready', async (req, res) => {
+  try {
+    const database = await checkDatabaseReadiness();
+
+    res.status(database.ok ? 200 : 503).json({
+      status: database.ok ? 'ready' : 'not_ready',
+      ...buildReadinessSnapshot(),
+      database: database.checks,
+    });
+  } catch (error) {
+    console.error('[ready] Database readiness check failed:', error);
+    res.status(503).json({
+      status: 'not_ready',
+      ...buildReadinessSnapshot(),
+      database: {
+        reachable: false,
+      },
+    });
+  }
 });
 
 logAuthModeBanner();
