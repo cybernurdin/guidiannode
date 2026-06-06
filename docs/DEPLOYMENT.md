@@ -59,6 +59,10 @@ The repository root now contains `Dockerfile`, `.dockerignore`, and
 `railway.json`, so Railway can deploy the backend correctly even when the
 service Root Directory remains `/`.
 
+Both Railway configurations watch `server/**`; backend changes therefore
+trigger deployments whether the service uses the repository-root or
+backend-root layout.
+
 Recommended Railway configuration:
 
 ```text
