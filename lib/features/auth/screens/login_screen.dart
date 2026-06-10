@@ -99,7 +99,9 @@ class _LoginScreenState extends State<LoginScreen> {
       final verificationId = response['verificationId']?.toString();
       final token = response['token']?.toString();
       final whatsappUrl = response['whatsappUrl']?.toString();
-      final expiresAt = response['expiresAt']?.toString() ?? response['expires_at']?.toString();
+      final expiresAt =
+          response['expiresAt']?.toString() ??
+          response['expires_at']?.toString();
 
       if (verificationId == null || token == null || whatsappUrl == null) {
         StatusSnackbar.show(
@@ -121,12 +123,14 @@ class _LoginScreenState extends State<LoginScreen> {
             subtitle:
                 'Send the prepared message from WhatsApp to securely continue.',
             onRequestNew: () => ApiService.startLoginVerification(phoneNumber),
-            onVerified: (session) {
-              SessionService.setSession(session);
-              PostAuthFlow.routeAfterVerification(
-                context,
-                bootstrapLocationSharing: _isLocationEnabled,
-              );
+            onVerified: (session) async {
+              await SessionService.setSession(session);
+
+              if (!mounted) {
+                return;
+              }
+
+              _routeAfterVerification();
             },
           ),
         ),
@@ -143,6 +147,13 @@ class _LoginScreenState extends State<LoginScreen> {
         tone: StatusTone.error,
       );
     }
+  }
+
+  void _routeAfterVerification() {
+    PostAuthFlow.routeAfterVerification(
+      context,
+      bootstrapLocationSharing: _isLocationEnabled,
+    );
   }
 
   @override

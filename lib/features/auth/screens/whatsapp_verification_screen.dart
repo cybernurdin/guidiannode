@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -19,6 +20,7 @@ class WhatsappVerificationScreen extends StatefulWidget {
     required this.whatsappUrl,
     required this.onVerified,
     required this.onRequestNew,
+    this.statusLoader,
     this.expiresAt,
     this.title = 'Verify with WhatsApp',
     this.subtitle =
@@ -28,8 +30,10 @@ class WhatsappVerificationScreen extends StatefulWidget {
   final String verificationId;
   final String token;
   final String whatsappUrl;
-  final ValueChanged<Map<String, dynamic>> onVerified;
+  final Future<void> Function(Map<String, dynamic>) onVerified;
   final Future<Map<String, dynamic>> Function() onRequestNew;
+  final Future<Map<String, dynamic>> Function(String verificationId)?
+  statusLoader;
   final String? expiresAt;
   final String title;
   final String subtitle;
@@ -59,6 +63,12 @@ class _WhatsappVerificationScreenState
   DateTime? _expiryTime;
   DateTime _lastCheckedTime = DateTime.now();
   int _secondsElapsedSinceStart = 0;
+
+  void _logVerification(String message) {
+    if (kDebugMode) {
+      debugPrint('[VERIFY_SCREEN] $message');
+    }
+  }
 
   @override
   void initState() {
@@ -162,9 +172,13 @@ class _WhatsappVerificationScreenState
     setState(() {
       _isPolling = true;
     });
+    _logVerification('checking verificationId=$_verificationId');
 
     try {
-      final response = await ApiService.getVerificationStatus(_verificationId);
+      final response =
+          await (widget.statusLoader ?? ApiService.getVerificationStatus)(
+            _verificationId,
+          );
 
       if (!mounted) return;
 
@@ -182,18 +196,38 @@ class _WhatsappVerificationScreenState
       }
 
       final status = response['status']?.toString() ?? 'pending';
+      _logVerification('status=$status');
 
       if (response['verified'] == true || status == 'verified') {
-        _cancelTimers();
         final session = _sessionFromVerifiedResponse(response);
+        _logVerification(
+          'authToken received=${session?['access_token'] != null ? 'yes' : 'no'}',
+        );
 
         if (session != null) {
-          widget.onVerified(session);
+          _cancelTimers();
+          _logVerification('navigating to dashboard');
+          await widget.onVerified(session);
           return;
         }
 
+        final authStillCompleting =
+            response['authReady'] == false ||
+            response['nextStep']?.toString() == 'completing_auth';
+
+        if (authStillCompleting) {
+          setState(() {
+            _status = 'verified';
+            _message = 'WhatsApp verified. Finishing secure sign-in...';
+          });
+          return;
+        }
+
+        _cancelTimers();
         setState(() {
-          _message = 'Verification succeeded, but no app session was returned.';
+          _status = 'failed';
+          _message =
+              'WhatsApp verification completed, but secure sign-in could not be created. Generate a new link and try again.';
         });
         return;
       }
@@ -467,7 +501,7 @@ class _WhatsappVerificationScreenState
           if (!isExpired && !isFailed) ...[
             const SizedBox(height: AppSpacing.md),
             AppButton(
-              label: 'I have sent the message — Check now',
+              label: 'I have sent the message \u2014 Check now',
               icon: Icons.check_circle_outline_rounded,
               tone: AppButtonTone.secondary,
               isLoading: _isPolling,

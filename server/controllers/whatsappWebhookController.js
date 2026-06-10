@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 
+const authService = require('../services/authService');
 const whatsappVerificationService = require('../services/whatsappVerificationService');
 const { maskPhoneNumber } = require('../utils/authUtils');
 
@@ -88,6 +89,20 @@ const processIncomingMessages = async (messages, startTime) => {
       });
 
       if (result && result.verified) {
+        const authStartTime = Date.now();
+
+        try {
+          await authService.completeVerifiedOtpSession(result.otpSession);
+          console.log(
+            `[WEBHOOK] authCompleted=true verificationId=${result.verificationId} completedMs=${Date.now() - authStartTime}`
+          );
+        } catch (error) {
+          console.error(
+            `[WEBHOOK] authCompleted=false verificationId=${result.verificationId}:`,
+            error
+          );
+        }
+
         if (result.userId && result.userId !== 'none') {
           console.log(`[WEBHOOK] User activation updated: userId=${result.userId}`);
         }
