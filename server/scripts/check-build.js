@@ -3,8 +3,11 @@ const { spawnSync } = require('node:child_process');
 const files = [
   'server.js',
   'config/databaseReadiness.js',
+  'services/authService.js',
+  'services/userService.js',
   'services/whatsappVerificationService.js',
   'controllers/whatsappWebhookController.js',
+  'scripts/test-live-verification-flow.js',
   'routes/legalRoutes.js',
 ];
 

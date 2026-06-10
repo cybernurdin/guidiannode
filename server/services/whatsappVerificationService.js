@@ -95,39 +95,12 @@ const isMissingColumnError = (error, columnName) => {
   );
 };
 
-const pendingTokenExists = async (token) => {
-  const { data, error } = await supabaseAdmin
-    .from(OTP_SESSIONS_TABLE)
-    .select('id')
-    .eq('status', 'pending')
-    .eq('otp_code_hash', hashOtpCode(token))
-    .limit(1);
-
-  if (error) {
-    throw wrapDatabaseError(error, OTP_SESSIONS_TABLE);
-  }
-
-  return (data ?? []).length > 0;
-};
-
-const generateUniqueWhatsappVerificationToken = async () => {
-  for (let attempt = 0; attempt < TOKEN_GENERATION_RETRIES; attempt += 1) {
-    const token = generateWhatsappVerificationToken();
-
-    if (!(await pendingTokenExists(token))) {
-      return token;
-    }
-  }
-
-  throw new AppError(
-    'Unable to create a unique WhatsApp verification token. Please try again.',
-    500,
-    'whatsapp_token_generation_failed'
-  );
-};
-
-const cancelPendingVerificationSessions = async ({ phoneNumber, purpose }) => {
-  const { error } = await supabaseAdmin
+const cancelPendingVerificationSessions = async ({
+  phoneNumber,
+  purpose,
+  exceptVerificationId = null,
+}) => {
+  let query = supabaseAdmin
     .from(OTP_SESSIONS_TABLE)
     .update({
       status: 'cancelled',
@@ -136,6 +109,12 @@ const cancelPendingVerificationSessions = async ({ phoneNumber, purpose }) => {
     .eq('phone_number', phoneNumber)
     .eq('purpose', purpose)
     .eq('status', 'pending');
+
+  if (exceptVerificationId) {
+    query = query.neq('id', exceptVerificationId);
+  }
+
+  const { error } = await query;
 
   if (error) {
     throw wrapDatabaseError(error, OTP_SESSIONS_TABLE);
@@ -148,33 +127,7 @@ const createWhatsappVerification = async ({
   pendingUserId = null,
   registrationPayload = null,
 }) => {
-  const token = await generateUniqueWhatsappVerificationToken();
   const expiresAt = addMinutes(authConfig.otpExpiresMinutes);
-  const whatsappUrl = buildWhatsappUrl(token);
-
-  await cancelPendingVerificationSessions({ phoneNumber, purpose });
-
-  const sessionPayload = {
-    id: crypto.randomUUID(),
-    phone_number: phoneNumber,
-    purpose,
-    status: 'pending',
-    otp_code_hash: hashOtpCode(token),
-    expires_at: expiresAt,
-    attempts: 0,
-    max_attempts: 1,
-    pending_user_id: pendingUserId,
-    verification_method: WHATSAPP_INBOUND_METHOD,
-    registration_payload: registrationPayload,
-    metadata: {
-      mode: WHATSAPP_INBOUND_METHOD,
-      verification_method: WHATSAPP_INBOUND_METHOD,
-      token_format: 'CM-XXXXX',
-      whatsapp_business_number: getWhatsappBusinessNumber(),
-    },
-    created_at: nowIso(),
-    updated_at: nowIso(),
-  };
 
   const insertSession = (payload) =>
     supabaseAdmin
@@ -183,21 +136,74 @@ const createWhatsappVerification = async ({
       .select()
       .single();
 
-  let activePayload = { ...sessionPayload };
-  let { data, error } = await insertSession(activePayload);
+  let data = null;
+  let token = null;
+  let error = null;
 
-  for (const optionalColumn of ['pending_user_id', 'verification_method']) {
-    if (!error || !isMissingColumnError(error, optionalColumn)) {
-      continue;
+  for (let attempt = 0; attempt < TOKEN_GENERATION_RETRIES; attempt += 1) {
+    token = generateWhatsappVerificationToken();
+    let activePayload = {
+      id: crypto.randomUUID(),
+      phone_number: phoneNumber,
+      purpose,
+      status: 'pending',
+      otp_code_hash: hashOtpCode(token),
+      expires_at: expiresAt,
+      attempts: 0,
+      max_attempts: 1,
+      pending_user_id: pendingUserId,
+      verification_method: WHATSAPP_INBOUND_METHOD,
+      registration_payload: registrationPayload,
+      metadata: {
+        mode: WHATSAPP_INBOUND_METHOD,
+        verification_method: WHATSAPP_INBOUND_METHOD,
+        token_format: 'CM-XXXXX',
+        whatsapp_business_number: getWhatsappBusinessNumber(),
+      },
+      created_at: nowIso(),
+      updated_at: nowIso(),
+    };
+
+    ({ data, error } = await insertSession(activePayload));
+
+    for (const optionalColumn of ['pending_user_id', 'verification_method']) {
+      if (!error || !isMissingColumnError(error, optionalColumn)) {
+        continue;
+      }
+
+      delete activePayload[optionalColumn];
+      ({ data, error } = await insertSession(activePayload));
     }
 
-    delete activePayload[optionalColumn];
-    ({ data, error } = await insertSession(activePayload));
+    if (!error) {
+      break;
+    }
+
+    if (error.code !== '23505') {
+      throw wrapDatabaseError(error, OTP_SESSIONS_TABLE);
+    }
   }
 
   if (error) {
-    throw wrapDatabaseError(error, OTP_SESSIONS_TABLE);
+    throw new AppError(
+      'Unable to create a unique WhatsApp verification token. Please try again.',
+      500,
+      'whatsapp_token_generation_failed'
+    );
   }
+
+  setImmediate(() => {
+    cancelPendingVerificationSessions({
+      phoneNumber,
+      purpose,
+      exceptVerificationId: data.id,
+    }).catch((cleanupError) => {
+      console.error(
+        `[auth] Failed to cancel older ${purpose} verifications for ${maskPhoneNumber(phoneNumber)}:`,
+        cleanupError
+      );
+    });
+  });
 
   console.log(
     `[auth] Created WhatsApp ${purpose} verification ${data.id} for ${maskPhoneNumber(phoneNumber)}.`
@@ -207,7 +213,7 @@ const createWhatsappVerification = async ({
     otpSession: data,
     token,
     expiresAt,
-    whatsappUrl,
+    whatsappUrl: buildWhatsappUrl(token),
   };
 };
 
@@ -272,6 +278,20 @@ const resolveVerificationSessionStatus = async (verificationId) => {
   }
 
   return otpSession;
+};
+
+const saveVerificationAuthCompletion = async (otpSession, user) => {
+  const completedAt = nowIso();
+  const metadata = {
+    ...(otpSession.metadata ?? {}),
+    auth_completion: {
+      completed_at: completedAt,
+      user_id: user.id,
+      user,
+    },
+  };
+
+  return updateVerificationSession(otpSession.id, { metadata });
 };
 
 const phoneDigits = (phoneNumber) => normalizePhoneNumber(phoneNumber).replace(/\D/g, '');
@@ -494,5 +514,6 @@ module.exports = {
   getWhatsappBusinessNumber,
   normalizeVerificationToken,
   resolveVerificationSessionStatus,
+  saveVerificationAuthCompletion,
   verifyIncomingWhatsappToken,
 };

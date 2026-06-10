@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -60,6 +61,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   _WhatsappVerification? _whatsappVerification;
   String? _verificationMessage;
+
+  void _logVerification(String message) {
+    if (kDebugMode) {
+      debugPrint('[VERIFY_SCREEN] $message');
+    }
+  }
 
   @override
   void initState() {
@@ -303,6 +310,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     }
 
     setState(() => _isPollingVerification = true);
+    _logVerification('checking verificationId=${verification.verificationId}');
 
     try {
       final response = await ApiService.getVerificationStatus(
@@ -328,13 +336,23 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
       final status = response['status']?.toString() ?? 'pending';
       final verified = response['verified'] == true || status == 'verified';
+      _logVerification('status=$status');
 
       if (verified) {
-        _cancelVerificationTimers();
         final sessionPayload = _sessionFromVerifiedResponse(response);
+        _logVerification(
+          'authToken received=${sessionPayload?['access_token'] != null ? 'yes' : 'no'}',
+        );
 
         if (sessionPayload != null) {
-          SessionService.setSession(sessionPayload);
+          _cancelVerificationTimers();
+          await SessionService.setSession(sessionPayload);
+          _logVerification('navigating to dashboard');
+
+          if (!mounted) {
+            return;
+          }
+
           PostAuthFlow.routeAfterVerification(
             context,
             bootstrapLocationSharing: _enableLocationSharing,
@@ -342,10 +360,25 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           return;
         }
 
-        StatusSnackbar.show(
-          context,
-          message: 'Verification completed. Please sign in to continue.',
-        );
+        final authStillCompleting =
+            response['authReady'] == false ||
+            response['nextStep']?.toString() == 'completing_auth';
+
+        if (authStillCompleting) {
+          setState(() {
+            _whatsappVerification = verification.copyWith(status: 'verified');
+            _verificationMessage =
+                'WhatsApp verified. Finishing secure sign-in...';
+          });
+          return;
+        }
+
+        _cancelVerificationTimers();
+        setState(() {
+          _whatsappVerification = verification.copyWith(status: 'failed');
+          _verificationMessage =
+              'WhatsApp verification completed, but secure sign-in could not be created. Generate a new link and try again.';
+        });
         return;
       }
 
@@ -591,7 +624,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         if (!isExpired && !isFailed) ...[
           const SizedBox(height: AppSpacing.md),
           AppButton(
-            label: 'I have sent the message — Check now',
+            label: 'I have sent the message \u2014 Check now',
             icon: Icons.check_circle_outline_rounded,
             tone: AppButtonTone.secondary,
             isLoading: _isPollingVerification,

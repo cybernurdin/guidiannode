@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/services/app_preferences.dart';
 import '../../../core/services/session_service.dart';
@@ -80,71 +81,62 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.trustBlue,
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isShortPhone = constraints.maxHeight < 620;
-            final logoSize = isShortPhone ? 110.0 : 124.0;
-            final verticalGap = isShortPhone ? AppSpacing.md : AppSpacing.lg;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: AppColors.trustBlue,
+        systemNavigationBarColor: AppColors.trustBlue,
+      ),
+      child: Scaffold(
+        backgroundColor: AppColors.trustBlue,
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final screenHeight = constraints.maxHeight;
+              final screenWidth = constraints.maxWidth;
+              final isCompact = screenHeight < 620;
+              final topSpacing = (screenHeight * 0.09).clamp(28.0, 76.0);
+              final logoSize = (screenWidth * 0.31).clamp(96.0, 120.0);
+              final sectionSpacing = isCompact ? AppSpacing.md : AppSpacing.lg;
 
-            return FadeTransition(
-              opacity: _fadeAnimation,
-              child: ScaleTransition(
-                scale: _scaleAnimation,
-                child: SingleChildScrollView(
-                  physics: const ClampingScrollPhysics(),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight,
+              return FadeTransition(
+                opacity: _fadeAnimation,
+                child: ScaleTransition(
+                  scale: _scaleAnimation,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xl,
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.xl,
-                        AppSpacing.xl,
-                        AppSpacing.xl,
-                        AppSpacing.xxxl,
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Container(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        SizedBox(height: topSpacing),
+                        PhysicalShape(
+                          clipper: const _SplashShieldClipper(),
+                          color: AppColors.cleanWhite,
+                          elevation: 8,
+                          shadowColor: Colors.black.withValues(alpha: 0.24),
+                          child: SizedBox(
                             width: logoSize,
                             height: logoSize,
-                            padding: const EdgeInsets.all(AppSpacing.xs),
-                            decoration: BoxDecoration(
-                              color: AppColors.cleanWhite,
-                              borderRadius: BorderRadius.circular(8),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.16),
-                                  blurRadius: 18,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(6),
-                              child: Image.asset(
-                                'assets/images/guardian_node_logo.png',
-                                fit: BoxFit.contain,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    Icon(
-                                      Icons.shield_rounded,
-                                      color: AppColors.trustBlue,
-                                      size: logoSize * 0.64,
-                                    ),
-                              ),
+                            child: Image.asset(
+                              'assets/images/guardian_node_logo.png',
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Icon(
+                                    Icons.shield_rounded,
+                                    color: AppColors.trustBlue,
+                                    size: logoSize * 0.64,
+                                  ),
                             ),
                           ),
-                          SizedBox(height: verticalGap),
-                          Text(
+                        ),
+                        SizedBox(height: sectionSpacing),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
                             'GuardianNode',
                             textAlign: TextAlign.center,
                             maxLines: 1,
-                            overflow: TextOverflow.visible,
                             style: Theme.of(context).textTheme.headlineMedium
                                 ?.copyWith(
                                   color: AppColors.cleanWhite,
@@ -152,37 +144,96 @@ class _SplashScreenState extends State<SplashScreen>
                                   letterSpacing: 0,
                                 ),
                           ),
-                          const SizedBox(height: AppSpacing.sm),
-                          Text(
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Flexible(
+                          fit: FlexFit.loose,
+                          child: Text(
                             'Help is one tap away.\nStronger together,\nsafer Bamenda.',
                             textAlign: TextAlign.center,
+                            maxLines: 3,
                             style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(
                                   color: AppColors.cleanWhite,
-                                  fontWeight: FontWeight.w800,
-                                  height: 1.42,
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.4,
                                   letterSpacing: 0,
                                 ),
                           ),
-                          SizedBox(height: verticalGap),
-                          const SizedBox(
-                            width: 30,
-                            height: 30,
-                            child: CircularProgressIndicator(
+                        ),
+                        SizedBox(height: sectionSpacing),
+                        SizedBox(
+                          width: 92,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(3),
+                            child: const LinearProgressIndicator(
+                              minHeight: 3,
                               color: AppColors.cleanWhite,
-                              strokeWidth: 2.6,
+                              backgroundColor: Color(0x4DFFFFFF),
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                        const Spacer(),
+                        SizedBox(
+                          height: (screenHeight * 0.06).clamp(20.0, 52.0),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );
   }
+}
+
+class _SplashShieldClipper extends CustomClipper<Path> {
+  const _SplashShieldClipper();
+
+  @override
+  Path getClip(Size size) {
+    return Path()
+      ..moveTo(size.width * 0.5, 0)
+      ..cubicTo(
+        size.width * 0.63,
+        size.height * 0.12,
+        size.width * 0.75,
+        size.height * 0.17,
+        size.width * 0.87,
+        size.height * 0.22,
+      )
+      ..lineTo(size.width * 0.84, size.height * 0.55)
+      ..cubicTo(
+        size.width * 0.8,
+        size.height * 0.76,
+        size.width * 0.66,
+        size.height * 0.9,
+        size.width * 0.5,
+        size.height,
+      )
+      ..cubicTo(
+        size.width * 0.34,
+        size.height * 0.9,
+        size.width * 0.2,
+        size.height * 0.76,
+        size.width * 0.16,
+        size.height * 0.55,
+      )
+      ..lineTo(size.width * 0.13, size.height * 0.22)
+      ..cubicTo(
+        size.width * 0.25,
+        size.height * 0.17,
+        size.width * 0.37,
+        size.height * 0.12,
+        size.width * 0.5,
+        0,
+      )
+      ..close();
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }

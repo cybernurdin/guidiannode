@@ -6,6 +6,8 @@ const { createAppSession } = require('./sessionService');
 const userService = require('./userService');
 const whatsappVerificationService = require('./whatsappVerificationService');
 
+const verificationCompletionPromises = new Map();
+
 const buildOtpStartResponse = (otpSession, message) => ({
   success: true,
   message,
@@ -118,14 +120,15 @@ const buildAuthenticatedPayload = (user, emergencyContact, message) => {
         emergency_contact: emergencyContact,
       }
     : user;
+  const safeUser = buildSafeUserPayload(enrichedUser);
 
   const helperMessage = buildDebugOtpHelperMessage();
 
   return {
     success: true,
     message,
-    session: createAppSession(enrichedUser),
-    user: enrichedUser,
+    session: createAppSession(safeUser),
+    user: safeUser,
     redirect: '/dashboard',
     debug: helperMessage
       ? {
@@ -153,7 +156,7 @@ const finalizeRegistration = async (otpSession) => {
       })
     ).id;
 
-  let user = await userService.saveUserProfile({
+  const user = await userService.saveUserProfile({
     id: userId,
     full_name: registrationPayload.full_name,
     phone_number: otpSession.phone_number,
@@ -162,17 +165,18 @@ const finalizeRegistration = async (otpSession) => {
     latitude: registrationPayload.latitude ?? null,
     longitude: registrationPayload.longitude ?? null,
   });
-  user = await userService.markUserPhoneVerified(user);
-
-  const emergencyContact = await userService.saveEmergencyContact({
-    user_id: user.id,
-    contact_name: registrationPayload.emergency_contact.contact_name,
-    phone_number: registrationPayload.emergency_contact.phone_number,
-    relationship: registrationPayload.emergency_contact.relationship,
-  });
+  const [verifiedUser, emergencyContact] = await Promise.all([
+    userService.markUserPhoneVerified(user),
+    userService.saveEmergencyContact({
+      user_id: user.id,
+      contact_name: registrationPayload.emergency_contact.contact_name,
+      phone_number: registrationPayload.emergency_contact.phone_number,
+      relationship: registrationPayload.emergency_contact.relationship,
+    }),
+  ]);
 
   return buildAuthenticatedPayload(
-    user,
+    verifiedUser,
     emergencyContact,
     'Phone verified. Registration completed successfully.'
   );
@@ -185,78 +189,201 @@ const finalizeLogin = async (otpSession) => {
     throw new AppError('No registered profile exists for this phone number.', 404, 'user_not_found');
   }
 
-  user = await userService.markUserPhoneVerified(user);
+  const [verifiedUser, emergencyContact] = await Promise.all([
+    userService.markUserPhoneVerified(user),
+    userService.getPrimaryEmergencyContact(user.id),
+  ]);
 
-  const emergencyContact = await userService.getPrimaryEmergencyContact(user.id);
-
-  return buildAuthenticatedPayload(user, emergencyContact, 'Phone verified successfully.');
+  return buildAuthenticatedPayload(
+    verifiedUser,
+    emergencyContact,
+    'Phone verified successfully.'
+  );
 };
 
+const getCompletedUserFromMetadata = (otpSession) => {
+  const completedUser = otpSession?.metadata?.auth_completion?.user;
+
+  if (!completedUser || typeof completedUser !== 'object' || !completedUser.id) {
+    return null;
+  }
+
+  return completedUser;
+};
+
+const wasVerifiedBeforeExpiry = (otpSession) => {
+  const expiresAt = new Date(otpSession.expires_at).getTime();
+  const verifiedAt = new Date(otpSession.verified_at).getTime();
+
+  if (!Number.isFinite(expiresAt)) {
+    return true;
+  }
+
+  if (Number.isFinite(verifiedAt)) {
+    return verifiedAt <= expiresAt;
+  }
+
+  return expiresAt > Date.now();
+};
+
+const completeVerifiedOtpSession = async (otpSession) => {
+  if (!otpSession || otpSession.status !== 'verified') {
+    throw new AppError(
+      'Verification is not ready to complete authentication.',
+      409,
+      'verification_not_verified'
+    );
+  }
+
+  if (!wasVerifiedBeforeExpiry(otpSession)) {
+    throw new AppError(
+      'The verification was completed after it expired. Please request a new link.',
+      410,
+      'verification_expired'
+    );
+  }
+
+  const completedUser = getCompletedUserFromMetadata(otpSession);
+  if (completedUser) {
+    return buildAuthenticatedPayload(
+      completedUser,
+      null,
+      'WhatsApp verification complete.'
+    );
+  }
+
+  const existingCompletion = verificationCompletionPromises.get(otpSession.id);
+  if (existingCompletion) {
+    return existingCompletion;
+  }
+
+  const completionPromise = (async () => {
+    const otpPurpose = normalizeOtpPurpose(otpSession.purpose);
+    let response;
+
+    if (otpPurpose === OTP_PURPOSE.REGISTER) {
+      response = await finalizeRegistration(otpSession);
+    } else if (otpPurpose === OTP_PURPOSE.LOGIN) {
+      response = await finalizeLogin(otpSession);
+    } else {
+      throw new AppError(
+        `Unsupported verification purpose: ${otpSession.purpose}`,
+        500,
+        'unsupported_verification_purpose'
+      );
+    }
+
+    await whatsappVerificationService.saveVerificationAuthCompletion(
+      otpSession,
+      response.user
+    );
+
+    return response;
+  })();
+
+  verificationCompletionPromises.set(otpSession.id, completionPromise);
+
+  try {
+    return await completionPromise;
+  } finally {
+    verificationCompletionPromises.delete(otpSession.id);
+  }
+};
+
+const isVerificationCompletionInProgress = (verificationId) =>
+  verificationCompletionPromises.has(verificationId);
+
 const getVerificationStatus = async ({ verificationId }) => {
-  const otpSession = await whatsappVerificationService.resolveVerificationSessionStatus(
-    verificationId
-  );
-  const status = otpSession.status;
+  const startTime = Date.now();
 
-  if (status === 'pending') {
-    return {
-      success: true,
-      verificationId: otpSession.id,
-      status: 'pending',
-      verified: false,
-      expiresAt: otpSession.expires_at,
-    };
-  }
+  try {
+    const otpSession = await whatsappVerificationService.resolveVerificationSessionStatus(
+      verificationId
+    );
+    const status = otpSession.status;
 
-  if (status === 'expired') {
-    return {
-      success: true,
-      verificationId: otpSession.id,
-      status: 'expired',
-      verified: false,
-      expiresAt: otpSession.expires_at,
-      message: 'Your verification link has expired. Please request a new one.',
-    };
-  }
+    if (status === 'pending') {
+      return {
+        success: true,
+        verificationId: otpSession.id,
+        status: 'pending',
+        verified: false,
+        authReady: false,
+        expiresAt: otpSession.expires_at,
+      };
+    }
 
-  if (status !== 'verified') {
-    return {
-      success: true,
-      verificationId: otpSession.id,
-      status,
-      verified: false,
-      expiresAt: otpSession.expires_at,
-    };
-  }
+    if (status === 'expired') {
+      return {
+        success: true,
+        verificationId: otpSession.id,
+        status: 'expired',
+        verified: false,
+        authReady: false,
+        expiresAt: otpSession.expires_at,
+        message: 'Your verification link has expired. Please request a new one.',
+      };
+    }
 
-  const otpPurpose = normalizeOtpPurpose(otpSession.purpose);
-  let response;
+    if (status !== 'verified') {
+      return {
+        success: true,
+        verificationId: otpSession.id,
+        status,
+        verified: false,
+        authReady: false,
+        expiresAt: otpSession.expires_at,
+      };
+    }
 
-  if (otpPurpose === OTP_PURPOSE.REGISTER) {
-    response = await finalizeRegistration(otpSession);
-  } else if (otpPurpose === OTP_PURPOSE.LOGIN) {
-    response = await finalizeLogin(otpSession);
-  } else {
+    if (!wasVerifiedBeforeExpiry(otpSession)) {
+      return {
+        success: true,
+        verificationId: otpSession.id,
+        status: 'expired',
+        verified: false,
+        authReady: false,
+        expiresAt: otpSession.expires_at,
+        message: 'Your verification link expired before authentication completed.',
+      };
+    }
+
+    if (
+      !getCompletedUserFromMetadata(otpSession) &&
+      isVerificationCompletionInProgress(otpSession.id)
+    ) {
+      return {
+        success: true,
+        verificationId: otpSession.id,
+        status: 'verified',
+        verified: true,
+        authReady: false,
+        expiresAt: otpSession.expires_at,
+        nextStep: 'completing_auth',
+        message: 'WhatsApp verified. Finishing secure sign-in.',
+      };
+    }
+
+    const response = await completeVerifiedOtpSession(otpSession);
+
     return {
       success: true,
       verificationId: otpSession.id,
       status: 'verified',
       verified: true,
+      authReady: true,
       expiresAt: otpSession.expires_at,
+      user: response.user,
+      session: response.session,
+      authToken: response.session?.access_token,
+      nextStep: 'dashboard',
+      message: response.message || 'WhatsApp verification complete.',
     };
+  } finally {
+    console.log(
+      `[VERIFICATION_STATUS] verificationId=${verificationId} completedMs=${Date.now() - startTime}`
+    );
   }
-
-  return {
-    success: true,
-    verificationId: otpSession.id,
-    status: 'verified',
-    verified: true,
-    expiresAt: otpSession.expires_at,
-    user: buildSafeUserPayload(response.user),
-    session: response.session,
-    authToken: response.session?.access_token,
-    message: response.message || 'WhatsApp verification complete.',
-  };
 };
 
 const verifyOtp = async ({ phone_number, otp_code, otp_session_id }) => {
@@ -302,7 +429,9 @@ const resendOtp = async ({ phone_number, otp_session_id }) => {
 };
 
 module.exports = {
+  completeVerifiedOtpSession,
   getVerificationStatus,
+  isVerificationCompletionInProgress,
   resendOtp,
   startLoginOtp,
   startRegistrationOtp,

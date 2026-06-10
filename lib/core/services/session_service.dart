@@ -37,9 +37,9 @@ class SessionService {
     }
   }
 
-  static void setSession(Map<String, dynamic> session) {
+  static Future<void> setSession(Map<String, dynamic> session) async {
     _session = Map<String, dynamic>.from(session);
-    _persistSession();
+    await _persistSession();
   }
 
   static void updateCurrentUserFields(Map<String, dynamic> fields) {
@@ -54,7 +54,7 @@ class SessionService {
       ...currentSession,
       'user': {...currentUser, ...fields},
     };
-    _persistSession();
+    unawaited(_persistSession());
   }
 
   static void clearSession() {
@@ -101,14 +101,14 @@ class SessionService {
     return DateTime.now().toUtc().isAfter(expiresAt.toUtc());
   }
 
-  static void _persistSession() {
+  static Future<void> _persistSession() async {
     final prefs = _preferences;
     final currentSession = _session;
     if (prefs == null || currentSession == null) {
       return;
     }
 
-    unawaited(prefs.setString(_sessionStorageKey, jsonEncode(currentSession)));
+    await prefs.setString(_sessionStorageKey, jsonEncode(currentSession));
   }
 
   @visibleForTesting
