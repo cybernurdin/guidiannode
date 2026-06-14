@@ -1,6 +1,17 @@
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+enum GuardianLocationStatus {
+  notRequested,
+  fetching,
+  ready,
+  usingLastKnown,
+  permissionDenied,
+  permissionDeniedForever,
+  serviceDisabled,
+  failed,
+}
+
 double? _toDouble(dynamic value) {
   if (value == null) {
     return null;
@@ -50,7 +61,7 @@ class PositionSnapshot {
       ? readableAddress!.trim()
       : locality?.trim().isNotEmpty == true
       ? locality!.trim()
-      : 'Location unavailable';
+      : 'Location ready';
 
   PositionSnapshot copyWith({
     double? latitude,
@@ -334,11 +345,13 @@ class FollowDetails {
 class LocationPermissionResult {
   const LocationPermissionResult({
     required this.granted,
+    this.status = GuardianLocationStatus.notRequested,
     this.message,
     this.snapshot,
   });
 
   final bool granted;
+  final GuardianLocationStatus status;
   final String? message;
   final PositionSnapshot? snapshot;
 }

@@ -8,6 +8,9 @@ class AppPreferences {
   static const _hasSeenOnboardingKey = 'has_seen_onboarding';
   static const _showCommunityBannersKey = 'show_community_banners';
   static const _showSafetyTipsKey = 'show_safety_tips';
+  static const _themeModeKey = 'theme_mode';
+  static const _languageKey = 'language';
+  static const _textSizeKey = 'text_size';
 
   static Future<void> ensureInitialized() async {
     _instance ??= await SharedPreferences.getInstance();
@@ -39,4 +42,23 @@ class AppPreferences {
 
   static Future<bool> setShowSafetyTips(bool value) =>
       _prefs.setBool(_showSafetyTipsKey, value);
+
+  static String get themeMode => _prefs.getString(_themeModeKey) ?? 'system';
+
+  static Future<bool> setThemeMode(String value) =>
+      _prefs.setString(_themeModeKey, value);
+
+  static String get language => _prefs.getString(_languageKey) ?? 'english';
+
+  static Future<bool> setLanguage(String value) =>
+      _prefs.setString(_languageKey, value);
+
+  static String get textSize => _prefs.getString(_textSizeKey) ?? 'medium';
+
+  static Future<bool> setTextSize(String value) =>
+      _prefs.setString(_textSizeKey, value);
+
+  static void resetForTesting() {
+    _instance = null;
+  }
 }

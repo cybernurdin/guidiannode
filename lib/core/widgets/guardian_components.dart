@@ -41,12 +41,14 @@ class GuardianLogo extends StatelessWidget {
     final textColor = onDark ? AppColors.cleanWhite : AppColors.trustBlue;
     final resolvedWidth = width ?? size;
     final resolvedHeight = height ?? size;
-    
+
     // Increased padding to make the icon fit cleaner and look more professional
     final resolvedPadding = padding ?? EdgeInsets.all(size * 0.12);
 
+    final resolvedTransparent = transparent || (!onDark && backgroundColor == null && !glassmorphic);
+
     Color bg;
-    if (transparent) {
+    if (resolvedTransparent) {
       bg = Colors.transparent;
     } else if (backgroundColor != null) {
       bg = backgroundColor!;
@@ -67,14 +69,14 @@ class GuardianLogo extends StatelessWidget {
         padding: resolvedPadding,
         decoration: BoxDecoration(
           color: bg,
-          borderRadius: BorderRadius.circular(borderRad),
+          borderRadius: resolvedTransparent ? null : BorderRadius.circular(borderRad),
           border: glassmorphic
               ? Border.all(
                   color: AppColors.cleanWhite.withValues(alpha: 0.25),
                   width: 1.5,
                 )
               : null,
-          boxShadow: onDark && !transparent && !glassmorphic
+          boxShadow: onDark && !resolvedTransparent && !glassmorphic
               ? AppElevation.soft
               : null,
         ),
@@ -480,8 +482,9 @@ class SettingsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Material(
-      color: AppColors.surface,
+      color: colors.surface,
       borderRadius: AppRadii.card,
       child: InkWell(
         onTap: onTap,
@@ -489,9 +492,9 @@ class SettingsTile extends StatelessWidget {
         child: Ink(
           padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: colors.surface,
             borderRadius: AppRadii.card,
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: colors.outlineVariant),
           ),
           child: Row(
             children: [
@@ -499,10 +502,10 @@ class SettingsTile extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: AppColors.trustBlueSurface,
+                  color: colors.primaryContainer,
                   borderRadius: AppRadii.card,
                 ),
-                child: Icon(icon, color: AppColors.trustBlue, size: 20),
+                child: Icon(icon, color: colors.onPrimaryContainer, size: 20),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(

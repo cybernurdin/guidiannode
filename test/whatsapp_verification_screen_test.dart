@@ -124,10 +124,7 @@ void main() {
             },
             whatsappLauncher: (_) async => true,
             confirmClickLoader:
-                ({
-                  required verificationId,
-                  required phoneNumber,
-                }) async => {
+                ({required verificationId, required phoneNumber}) async => {
                   'success': false,
                   'status': 'failed',
                   'code': 'PHONE_NOT_REGISTERED',

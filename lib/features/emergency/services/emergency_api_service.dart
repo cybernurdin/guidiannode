@@ -1,9 +1,4 @@
-import 'dart:convert';
-
-import 'package:http/http.dart' as http;
-
-import '../../../core/config/app_config.dart';
-import '../../../core/services/session_service.dart';
+import '../../../core/services/api_client.dart';
 import '../models/emergency_models.dart';
 
 class EmergencyApiService {
@@ -114,36 +109,6 @@ class EmergencyApiService {
     Map<String, dynamic>? body,
     Map<String, String>? query,
   }) async {
-    final uri = Uri.parse(
-      '${AppConfig.apiBaseUrl}$path',
-    ).replace(queryParameters: query);
-    final response = http.Request(method, uri)
-      ..headers.addAll(_headers)
-      ..body = body == null ? '' : jsonEncode(body);
-    final streamedResponse = await response.send();
-    final rawResponse = await http.Response.fromStream(streamedResponse);
-    final decodedBody = rawResponse.body.isEmpty
-        ? <String, dynamic>{}
-        : jsonDecode(rawResponse.body) as Map<String, dynamic>;
-
-    if (rawResponse.statusCode < 200 || rawResponse.statusCode >= 300) {
-      throw Exception(
-        decodedBody['message']?.toString() ??
-            'The GuardianNode request failed.',
-      );
-    }
-
-    return decodedBody;
-  }
-
-  static Map<String, String> get _headers {
-    final headers = <String, String>{'Content-Type': 'application/json'};
-    final token = SessionService.accessToken;
-
-    if (token != null && token.isNotEmpty) {
-      headers['Authorization'] = 'Bearer $token';
-    }
-
-    return headers;
+    return ApiClient.request(method, path, body: body, query: query);
   }
 }

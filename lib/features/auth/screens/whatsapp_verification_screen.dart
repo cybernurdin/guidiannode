@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/services/api_service.dart';
+import '../../../core/services/api_client.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/radii.dart';
 import '../../../core/theme/spacing.dart';
@@ -289,11 +290,11 @@ class _WhatsappVerificationScreenState
 
   Future<void> _handleConfirmWhatsappClick() async {
     try {
-      final response = await (widget.confirmClickLoader ??
-          ApiService.confirmWhatsappClick)(
-        verificationId: _verificationId,
-        phoneNumber: widget.phoneNumber,
-      );
+      final response =
+          await (widget.confirmClickLoader ?? ApiService.confirmWhatsappClick)(
+            verificationId: _verificationId,
+            phoneNumber: widget.phoneNumber,
+          );
 
       if (!mounted) return;
 
@@ -325,11 +326,20 @@ class _WhatsappVerificationScreenState
 
       StatusSnackbar.show(
         context,
-        message: response['message']?.toString() ?? 'Verification could not be confirmed.',
+        message:
+            response['message']?.toString() ??
+            'Verification could not be confirmed.',
         tone: StatusTone.error,
       );
     } catch (e) {
       _logVerification('confirm-whatsapp-click error: $e');
+      if (mounted) {
+        StatusSnackbar.show(
+          context,
+          message: ApiClient.friendlyMessage(e),
+          tone: StatusTone.error,
+        );
+      }
     }
   }
 

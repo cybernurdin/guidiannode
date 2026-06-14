@@ -5,8 +5,6 @@ class AppConfig {
       'https://guidiannode-production.up.railway.app';
   static const String _androidEmulatorApiBaseUrl = 'http://10.0.2.2:3000';
   static const String _loopbackApiBaseUrl = 'http://127.0.0.1:3000';
-  static const String _androidEmulatorApiAuthBaseUrl =
-      '$_androidEmulatorApiBaseUrl/api/auth';
   static const String _apiBaseUrlOverride = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: String.fromEnvironment('VITE_API_BASE_URL', defaultValue: ''),
@@ -42,16 +40,16 @@ class AppConfig {
   );
 
   static String get apiBaseUrl {
+    if (kReleaseMode) {
+      return _productionApiBaseUrl;
+    }
+
     if (_apiBaseUrlOverride.isNotEmpty) {
       return _normalizeBaseUrl(_apiBaseUrlOverride);
     }
 
     if (_apiAuthBaseUrlOverride.isNotEmpty) {
       return _deriveBaseUrlFromAuthUrl(_apiAuthBaseUrlOverride);
-    }
-
-    if (kReleaseMode) {
-      return _productionApiBaseUrl;
     }
 
     if (defaultTargetPlatform == TargetPlatform.android) {
@@ -62,6 +60,10 @@ class AppConfig {
   }
 
   static String get apiAuthBaseUrl {
+    if (kReleaseMode) {
+      return '$_productionApiBaseUrl/api/auth';
+    }
+
     if (_apiAuthBaseUrlOverride.isNotEmpty) {
       return _normalizeBaseUrl(_apiAuthBaseUrlOverride);
     }
@@ -70,23 +72,6 @@ class AppConfig {
   }
 
   static Uri get dataDeletionUri => Uri.parse('$apiBaseUrl/data-deletion');
-
-  static String get apiAuthBaseUrlHint {
-    if (_apiAuthBaseUrlOverride.isNotEmpty || _apiBaseUrlOverride.isNotEmpty) {
-      return 'Current backend URL: $apiBaseUrl';
-    }
-
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'Android defaults to $_androidEmulatorApiAuthBaseUrl, which only '
-          'works inside the emulator. On a physical phone, either run adb '
-          'reverse tcp:3000 tcp:3000 and launch with '
-          '--dart-define=API_BASE_URL=$_loopbackApiBaseUrl, or use '
-          '--dart-define=API_BASE_URL=http://<your-computer-ip>:3000.';
-    }
-
-    return 'If the backend is running on another machine or device, launch '
-        'the app with --dart-define=API_BASE_URL=http://<host>:3000.';
-  }
 
   static String get googleMapsApiKey => _googleMapsApiKey;
 

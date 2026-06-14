@@ -208,6 +208,77 @@ class AppTheme {
     );
   }
 
+  static ThemeData get darkTheme {
+    final base = ThemeData.dark(useMaterial3: true);
+    const colorScheme = ColorScheme.dark(
+      primary: Color(0xFF9FC2FF),
+      onPrimary: Color(0xFF002F68),
+      secondary: Color(0xFFFFB59B),
+      onSecondary: Color(0xFF5B1A00),
+      tertiary: AppColors.communityYellow,
+      onTertiary: AppColors.textPrimary,
+      error: Color(0xFFFFB4A9),
+      onError: Color(0xFF680003),
+      surface: Color(0xFF101B2D),
+      onSurface: Color(0xFFE7EDF7),
+      surfaceContainer: Color(0xFF17243A),
+      onSurfaceVariant: Color(0xFFB8C4D6),
+      outlineVariant: Color(0xFF3A4961),
+    );
+
+    return base.copyWith(
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: const Color(0xFF081426),
+      textTheme: AppTypography.textTheme.apply(
+        bodyColor: colorScheme.onSurface,
+        displayColor: colorScheme.onSurface,
+      ),
+      appBarTheme: AppBarTheme(
+        backgroundColor: Colors.transparent,
+        foregroundColor: colorScheme.onSurface,
+        elevation: 0,
+        titleTextStyle: GoogleFonts.inter(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          color: colorScheme.onSurface,
+        ),
+      ),
+      inputDecorationTheme: lightTheme.inputDecorationTheme.copyWith(
+        fillColor: colorScheme.surface,
+        labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+        hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+        prefixIconColor: colorScheme.onSurfaceVariant,
+        suffixIconColor: colorScheme.onSurfaceVariant,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: AppRadii.button,
+          borderSide: BorderSide(color: colorScheme.outlineVariant),
+        ),
+      ),
+      cardTheme: CardThemeData(
+        color: colorScheme.surface,
+        elevation: 0,
+        shape: const RoundedRectangleBorder(borderRadius: AppRadii.card),
+        margin: EdgeInsets.zero,
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: colorScheme.surface,
+        indicatorColor: colorScheme.primaryContainer,
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(borderRadius: AppRadii.sheet),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(borderRadius: AppRadii.card),
+      ),
+      dividerTheme: DividerThemeData(color: colorScheme.outlineVariant),
+      iconTheme: IconThemeData(color: colorScheme.onSurface, size: 22),
+    );
+  }
+
   static BoxDecoration elevatedSurface({
     Color color = AppColors.surface,
     BorderRadius borderRadius = AppRadii.card,

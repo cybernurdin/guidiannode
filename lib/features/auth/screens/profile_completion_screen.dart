@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/services/session_service.dart';
+import '../../../core/services/api_client.dart';
 import '../../../core/theme/spacing.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/status_widgets.dart';
@@ -99,7 +100,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
       setState(() => _isSaving = false);
       StatusSnackbar.show(
         context,
-        message: error.toString().replaceFirst('Exception: ', ''),
+        message: ApiClient.friendlyMessage(error),
         tone: StatusTone.error,
       );
       return;

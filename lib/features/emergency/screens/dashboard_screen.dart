@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/services/app_preferences.dart';
+import '../../../core/services/api_client.dart';
 import '../../../core/services/session_service.dart';
-import '../../../core/theme/colors.dart';
 import '../../../core/widgets/status_widgets.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../models/emergency_models.dart';
@@ -31,7 +31,7 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingObserver {
   final EmergencyCoordinator _coordinator = EmergencyCoordinator.instance;
   late final Future<void> _mapsLoaderFuture;
 
@@ -46,6 +46,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _mapsLoaderFuture = GoogleMapsLoader.ensureLoaded();
     _coordinator.addListener(_handleCoordinatorUpdated);
     unawaited(_initializeDashboard());
@@ -53,6 +54,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _coordinator.removeListener(_handleCoordinatorUpdated);
     unawaited(
       SupabaseRealtimeService.instance.unsubscribe(_notificationsChannel),
@@ -61,6 +63,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       SupabaseRealtimeService.instance.unsubscribe(_emergencyFeedChannel),
     );
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_coordinator.checkAndUpdateLocationStatus());
+    }
   }
 
   Future<void> _initializeDashboard() async {
@@ -181,12 +190,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       setState(() {
         _isLoadingAlerts = false;
-        _alertsError = error.toString().replaceFirst('Exception: ', '');
+        _alertsError = ApiClient.friendlyMessage(error);
       });
     }
   }
 
   Future<void> _handleLocationSharingChanged(bool enabled) async {
+    if (enabled &&
+        _coordinator.locationStatus ==
+            GuardianLocationStatus.permissionDeniedForever) {
+      await _coordinator.openAppSettings();
+      return;
+    }
+    if (enabled &&
+        _coordinator.locationStatus == GuardianLocationStatus.serviceDisabled) {
+      await _coordinator.openLocationSettings();
+      return;
+    }
+
     final success = await _coordinator.setLocationSharingEnabled(enabled);
 
     if (!mounted) {
@@ -244,7 +265,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       StatusSnackbar.show(
         context,
-        message: error.toString().replaceFirst('Exception: ', ''),
+        message: ApiClient.friendlyMessage(
+          error,
+          fallback: 'The SOS could not be sent. Please try again.',
+        ),
         tone: StatusTone.error,
       );
     }
@@ -283,7 +307,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: IndexedStack(
         index: _currentIndex,
         children: [

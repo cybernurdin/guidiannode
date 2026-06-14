@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/services/api_service.dart';
+import '../../../core/services/api_client.dart';
 import '../../../core/services/session_service.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/radii.dart';
@@ -251,7 +252,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       setState(() => _isLoading = false);
       StatusSnackbar.show(
         context,
-        message: 'An error occurred: $error',
+        message: ApiClient.friendlyMessage(error),
         tone: StatusTone.error,
       );
     }
@@ -561,7 +562,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
       StatusSnackbar.show(
         context,
-        message: response['message']?.toString() ?? 'Verification could not be confirmed.',
+        message:
+            response['message']?.toString() ??
+            'Verification could not be confirmed.',
         tone: StatusTone.error,
       );
     } catch (e) {

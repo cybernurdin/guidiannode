@@ -65,6 +65,11 @@ class SessionService {
     }
   }
 
+  static Future<void> clearSessionAsync() async {
+    _session = null;
+    await _preferences?.remove(_sessionStorageKey);
+  }
+
   static Map<String, dynamic>? _readStoredSession() {
     final rawSession = _preferences?.getString(_sessionStorageKey);
     if (rawSession == null || rawSession.isEmpty) {

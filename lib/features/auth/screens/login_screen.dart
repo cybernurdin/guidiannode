@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/services/api_service.dart';
+import '../../../core/services/api_client.dart';
+import '../../../core/localization/app_strings.dart';
 import '../../../core/services/session_service.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/radii.dart';
@@ -193,7 +195,7 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _isLoading = false);
       StatusSnackbar.show(
         context,
-        message: 'An error occurred: $error',
+        message: ApiClient.friendlyMessage(error),
         tone: StatusTone.error,
       );
     }
@@ -210,8 +212,8 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return AuthScaffold(
       showBackButton: false,
-      title: 'Welcome back!',
-      subtitle: 'Login to continue',
+      title: context.tr('welcome_back'),
+      subtitle: context.tr('login_continue'),
       badge: AuthHeroBadge(
         label: _isLocationEnabled ? 'Location ready' : 'WhatsApp sign-in',
         tone: _isLocationEnabled ? StatusTone.success : StatusTone.info,
@@ -324,7 +326,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: AppSpacing.xl),
             PrimaryButton(
-              text: 'Continue with WhatsApp',
+              text: context.tr('continue_whatsapp'),
               icon: Icons.chat_rounded,
               isLoading: _isLoading,
               onPressed: _handleLogin,

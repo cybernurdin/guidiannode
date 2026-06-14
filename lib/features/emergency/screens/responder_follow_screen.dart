@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/services/api_client.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/radii.dart';
 import '../../../core/theme/spacing.dart';
@@ -194,7 +195,7 @@ class _ResponderFollowScreenState extends State<ResponderFollowScreen> {
         setState(() {
           _isLoading = false;
           _isRefreshingRoute = false;
-          _error = error.toString().replaceFirst('Exception: ', '');
+          _error = ApiClient.friendlyMessage(error);
         });
       }
     }
