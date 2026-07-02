@@ -11,6 +11,7 @@ class AppPreferences {
   static const _themeModeKey = 'theme_mode';
   static const _languageKey = 'language';
   static const _textSizeKey = 'text_size';
+  static const _userMapTypeKey = 'user_map_type';
 
   static Future<void> ensureInitialized() async {
     _instance ??= await SharedPreferences.getInstance();
@@ -57,6 +58,12 @@ class AppPreferences {
 
   static Future<bool> setTextSize(String value) =>
       _prefs.setString(_textSizeKey, value);
+
+  static String get userMapType =>
+      _prefs.getString(_userMapTypeKey) ?? 'hybrid3d';
+
+  static Future<bool> setUserMapType(String value) =>
+      _prefs.setString(_userMapTypeKey, value);
 
   static void resetForTesting() {
     _instance = null;

@@ -37,7 +37,7 @@ class StatusBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = _paletteForTone(tone);
+    final palette = _paletteForTone(tone, isDark: AppColors.isDark(context));
 
     return ClipRRect(
       borderRadius: AppRadii.card,
@@ -96,7 +96,7 @@ class StatusBanner extends StatelessWidget {
                                   ?.copyWith(
                                     color: palette.foreground,
                                     fontWeight: FontWeight.w800,
-                                    letterSpacing: -0.2,
+                                    letterSpacing: 0,
                                   ),
                             ),
                           ),
@@ -104,9 +104,7 @@ class StatusBanner extends StatelessWidget {
                           message,
                           style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(
-                                color: palette.foreground.withValues(
-                                  alpha: 0.9,
-                                ),
+                                color: palette.content,
                                 fontWeight: FontWeight.w600,
                                 height: 1.4,
                               ),
@@ -186,7 +184,7 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = _paletteForTone(tone);
+    final palette = _paletteForTone(tone, isDark: AppColors.isDark(context));
     return Semantics(
       label: label,
       child: Container(
@@ -241,24 +239,24 @@ class StatusSnackbar {
     required String message,
     StatusTone tone = StatusTone.success,
   }) {
-    final palette = _paletteForTone(tone);
+    final palette = _paletteForTone(tone, isDark: AppColors.isDark(context));
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        backgroundColor: palette.foreground,
+        backgroundColor: palette.snackbarBackground,
         behavior: SnackBarBehavior.floating,
         shape: const RoundedRectangleBorder(borderRadius: AppRadii.card),
         elevation: 6,
         margin: const EdgeInsets.all(AppSpacing.md),
         content: Row(
           children: [
-            Icon(palette.icon, color: AppColors.cleanWhite, size: 18),
+            Icon(palette.icon, color: palette.snackbarContent, size: 18),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Text(
                 message,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.cleanWhite,
+                  color: palette.snackbarContent,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -274,39 +272,105 @@ class _StatusPalette {
   const _StatusPalette({
     required this.background,
     required this.foreground,
+    required this.content,
+    required this.snackbarBackground,
+    required this.snackbarContent,
     required this.icon,
   });
 
   final Color background;
   final Color foreground;
+  final Color content;
+  final Color snackbarBackground;
+  final Color snackbarContent;
   final IconData icon;
 }
 
-_StatusPalette _paletteForTone(StatusTone tone) {
+_StatusPalette _paletteForTone(StatusTone tone, {required bool isDark}) {
+  if (isDark) {
+    return switch (tone) {
+      StatusTone.success => const _StatusPalette(
+        background: Color(0xFF0F2D24),
+        foreground: Color(0xFF34D399),
+        content: AppColors.darkTextPrimary,
+        snackbarBackground: Color(0xFF0F2D24),
+        snackbarContent: AppColors.darkTextPrimary,
+        icon: Icons.check_circle_outline_rounded,
+      ),
+      StatusTone.warning => const _StatusPalette(
+        background: Color(0xFF332B12),
+        foreground: AppColors.communityYellow,
+        content: AppColors.darkTextPrimary,
+        snackbarBackground: Color(0xFF5C3B05),
+        snackbarContent: AppColors.darkTextPrimary,
+        icon: Icons.warning_amber_rounded,
+      ),
+      StatusTone.error => const _StatusPalette(
+        background: Color(0xFF3A1718),
+        foreground: AppColors.darkError,
+        content: AppColors.darkTextPrimary,
+        snackbarBackground: Color(0xFF5B1B1D),
+        snackbarContent: AppColors.darkTextPrimary,
+        icon: Icons.error_outline_rounded,
+      ),
+      StatusTone.info => const _StatusPalette(
+        background: Color(0xFF112642),
+        foreground: Color(0xFF8DB7FF),
+        content: AppColors.darkTextPrimary,
+        snackbarBackground: Color(0xFF112642),
+        snackbarContent: AppColors.darkTextPrimary,
+        icon: Icons.info_outline_rounded,
+      ),
+      StatusTone.action => const _StatusPalette(
+        background: Color(0xFF3A2118),
+        foreground: Color(0xFFFFB59B),
+        content: AppColors.darkTextPrimary,
+        snackbarBackground: Color(0xFF4B2113),
+        snackbarContent: AppColors.darkTextPrimary,
+        icon: Icons.notifications_active_outlined,
+      ),
+    };
+  }
+
   return switch (tone) {
     StatusTone.success => const _StatusPalette(
       background: AppColors.safetyGreenSurface,
       foreground: AppColors.safetyGreen,
+      content: AppColors.safetyGreen,
+      snackbarBackground: AppColors.safetyGreen,
+      snackbarContent: AppColors.cleanWhite,
       icon: Icons.check_circle_outline_rounded,
     ),
     StatusTone.warning => const _StatusPalette(
       background: AppColors.communityYellowSurface,
       foreground: Color(0xFF8A5A00),
+      content: Color(0xFF8A5A00),
+      snackbarBackground: Color(0xFF8A5A00),
+      snackbarContent: AppColors.cleanWhite,
       icon: Icons.warning_amber_rounded,
     ),
     StatusTone.error => const _StatusPalette(
       background: AppColors.errorSurface,
       foreground: AppColors.error,
+      content: AppColors.error,
+      snackbarBackground: AppColors.error,
+      snackbarContent: AppColors.cleanWhite,
       icon: Icons.error_outline_rounded,
     ),
     StatusTone.info => const _StatusPalette(
       background: AppColors.trustBlueSurface,
       foreground: AppColors.trustBlue,
+      content: AppColors.trustBlue,
+      snackbarBackground: AppColors.trustBlueDark,
+      snackbarContent: AppColors.cleanWhite,
       icon: Icons.info_outline_rounded,
     ),
     StatusTone.action => const _StatusPalette(
       background: AppColors.engagementOrangeSurface,
       foreground: AppColors.engagementOrange,
+      content: AppColors.engagementOrange,
+      snackbarBackground: AppColors.engagementOrange,
+      snackbarContent: AppColors.cleanWhite,
       icon: Icons.notifications_active_outlined,
     ),
   };

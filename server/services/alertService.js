@@ -9,6 +9,7 @@ const userService = require('./userService');
 
 const ALERTS_TABLE = 'alerts';
 const LIVE_LOCATIONS_TABLE = 'live_locations';
+const RESPONSES_TABLE = 'responses';
 const LIVE_LOCATION_DISTANCE_THRESHOLD_METERS = 15;
 const LIVE_LOCATION_MIN_INTERVAL_MS = 5000;
 const ADDRESS_REFRESH_DISTANCE_METERS = 60;
@@ -39,6 +40,22 @@ const isSchemaCacheMissingColumn = (error, relationName, columnName) => {
   return (
     reportedRelationName.toLowerCase() === String(relationName).toLowerCase() &&
     reportedColumnName.toLowerCase() === String(columnName).toLowerCase()
+  );
+};
+
+const isMissingRelation = (error, relationName) => {
+  const haystack = [error?.message, error?.details, error?.hint, error?.code]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  const normalizedRelationName = String(relationName).toLowerCase();
+
+  return (
+    error?.code === '42P01' ||
+    (haystack.includes('schema cache') &&
+      haystack.includes(normalizedRelationName)) ||
+    haystack.includes(`relation "${normalizedRelationName}" does not exist`) ||
+    haystack.includes(`table '${normalizedRelationName}'`)
   );
 };
 
@@ -399,6 +416,162 @@ const getNearbyActiveAlerts = async ({
   });
 };
 
+const upsertResponderResponse = async ({ alertId, responderId, status }) => {
+  const { data: existingRows, error: existingError } = await supabaseAdmin
+    .from(RESPONSES_TABLE)
+    .select('*')
+    .eq('alert_id', alertId)
+    .eq('responder_id', responderId)
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (existingError) {
+    throw existingError;
+  }
+
+  const existingResponse = Array.isArray(existingRows)
+    ? existingRows[0] ?? null
+    : null;
+
+  if (existingResponse) {
+    const query = existingResponse.id
+      ? supabaseAdmin
+          .from(RESPONSES_TABLE)
+          .update({ response_status: status })
+          .eq('id', existingResponse.id)
+      : supabaseAdmin
+          .from(RESPONSES_TABLE)
+          .update({ response_status: status })
+          .eq('alert_id', alertId)
+          .eq('responder_id', responderId);
+
+    const { data, error } = await query.select();
+
+    if (error) {
+      throw error;
+    }
+
+    return Array.isArray(data) && data.length > 0
+      ? data[0]
+      : { ...existingResponse, response_status: status };
+  }
+
+  const insertPayload = {
+    alert_id: alertId,
+    responder_id: responderId,
+    response_status: status,
+    created_at: new Date().toISOString(),
+  };
+
+  let { data, error } = await supabaseAdmin
+    .from(RESPONSES_TABLE)
+    .insert(insertPayload)
+    .select()
+    .single();
+
+  if (error && isSchemaCacheMissingColumn(error, RESPONSES_TABLE, 'created_at')) {
+    const fallbackPayload = { ...insertPayload };
+    delete fallbackPayload.created_at;
+
+    ({ data, error } = await supabaseAdmin
+      .from(RESPONSES_TABLE)
+      .insert(fallbackPayload)
+      .select()
+      .single());
+  }
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+};
+
+const respondToAlert = async ({
+  alertId,
+  responderId,
+  status = 'on_the_way',
+  latitude,
+  longitude,
+  accuracy,
+  heading,
+  speed,
+  source = 'device',
+}) => {
+  const alert = await getAlertById(alertId);
+
+  if (!alert) {
+    throw new AppError('Alert could not be found.', 404, 'alert_not_found');
+  }
+
+  if (alert.status !== 'active') {
+    throw new AppError(
+      'This alert is no longer active.',
+      409,
+      'alert_not_active'
+    );
+  }
+
+  if (alert.user_id === responderId) {
+    throw new AppError(
+      'You cannot respond to your own active alert.',
+      409,
+      'self_response_not_allowed'
+    );
+  }
+
+  let response = null;
+  let syncStatus = 'incident_logged';
+
+  try {
+    response = await upsertResponderResponse({ alertId, responderId, status });
+    syncStatus = 'response_record_synced';
+  } catch (error) {
+    const fallbackReason = isMissingRelation(error, RESPONSES_TABLE)
+      ? 'responses_table_unavailable'
+      : 'responses_write_failed';
+    console.warn(`Responder response fallback (${fallbackReason}):`, error.message);
+    syncStatus = fallbackReason;
+  }
+
+  await runBestEffort('Responder response incident log', () =>
+    realtimeService.createIncidentLog({
+      alertId,
+      action: `responder_${status}`,
+      performedBy: responderId,
+      metadata: {
+        response_status: status,
+        response_sync_status: syncStatus,
+        responder_location:
+          latitude !== undefined && longitude !== undefined
+            ? {
+                latitude,
+                longitude,
+                accuracy: toNullableNumber(accuracy),
+                heading: toNullableNumber(heading),
+                speed: toNullableNumber(speed),
+                source,
+              }
+            : null,
+      },
+    })
+  );
+
+  const victim = await userService.getUserById(alert.user_id);
+  const liveLocation = await getLatestLiveLocation(alertId, alert.user_id);
+
+  return {
+    response:
+      response ?? {
+        alert_id: alertId,
+        responder_id: responderId,
+        response_status: status,
+      },
+    sync_status: syncStatus,
+    alert: normalizeAlertPayload(alert, liveLocation, victim),
+  };
+};
+
 const getResponderFollowDetails = async ({
   alertId,
   responderLatitude,
@@ -423,14 +596,19 @@ const getResponderFollowDetails = async ({
       : await maybeReverseGeocode(coordinates);
   const route =
     responderLatitude !== undefined && responderLongitude !== undefined
-      ? await mapService.getRoute({
-          origin: {
-            latitude: responderLatitude,
-            longitude: responderLongitude,
-          },
-          destination: coordinates,
-          travelMode,
-        })
+      ? await runBestEffort(
+          'Responder route lookup',
+          () =>
+            mapService.getRoute({
+              origin: {
+                latitude: responderLatitude,
+                longitude: responderLongitude,
+              },
+              destination: coordinates,
+              travelMode,
+            }),
+          null
+        )
       : null;
   const resolvedLiveLocation = {
     ...(liveLocation ?? {}),
@@ -519,6 +697,7 @@ module.exports = {
   getLatestLiveLocation,
   getNearbyActiveAlerts,
   getResponderFollowDetails,
+  respondToAlert,
   resolveAlert,
   upsertLiveAlertLocation,
 };

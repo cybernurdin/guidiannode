@@ -82,26 +82,35 @@ class _AppButtonState extends State<AppButton>
   @override
   Widget build(BuildContext context) {
     final isEnabled = widget.onPressed != null && !widget.isLoading;
+    final isDark = AppColors.isDark(context);
+    final primaryTextColor = AppColors.cleanWhite;
+    final secondaryTextColor = isDark
+        ? AppColors.darkTextPrimary
+        : AppColors.trustBlueDark;
+    final outlineTextColor = isDark
+        ? Theme.of(context).colorScheme.primary
+        : AppColors.trustBlue;
+    final disabledColor = AppColors.disabledFor(context);
 
     final TextStyle textStyle = switch (widget.tone) {
       AppButtonTone.primary => Theme.of(context).textTheme.labelLarge!.copyWith(
-        color: AppColors.cleanWhite,
+        color: primaryTextColor,
         fontWeight: FontWeight.w700,
         letterSpacing: 0.2,
       ),
       AppButtonTone.secondary =>
         Theme.of(context).textTheme.labelLarge!.copyWith(
-          color: AppColors.trustBlueDark,
+          color: secondaryTextColor,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.1,
         ),
       AppButtonTone.outline => Theme.of(context).textTheme.labelLarge!.copyWith(
-        color: AppColors.trustBlue,
+        color: outlineTextColor,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.1,
       ),
       AppButtonTone.danger => Theme.of(context).textTheme.labelLarge!.copyWith(
-        color: AppColors.cleanWhite,
+        color: primaryTextColor,
         fontWeight: FontWeight.w700,
         letterSpacing: 0.2,
       ),
@@ -115,7 +124,7 @@ class _AppButtonState extends State<AppButton>
           end: Alignment.bottomRight,
           colors: isEnabled
               ? [AppColors.trustBlue, AppColors.trustBlueDark]
-              : [AppColors.disabled, AppColors.disabled.withValues(alpha: 0.8)],
+              : [disabledColor, disabledColor.withValues(alpha: 0.8)],
         ),
         boxShadow: isEnabled && !_isPressed
             ? [
@@ -130,14 +139,21 @@ class _AppButtonState extends State<AppButton>
       AppButtonTone.secondary => BoxDecoration(
         borderRadius: AppRadii.button,
         color: isEnabled
-            ? AppColors.trustBlueSurface
-            : AppColors.disabled.withValues(alpha: 0.15),
+            ? (isDark
+                  ? AppColors.trustBlue.withValues(alpha: 0.28)
+                  : AppColors.trustBlueSurface)
+            : disabledColor.withValues(alpha: 0.18),
+        border: Border.all(
+          color: isDark
+              ? AppColors.trustBlue.withValues(alpha: 0.38)
+              : Colors.transparent,
+        ),
       ),
       AppButtonTone.outline => BoxDecoration(
         borderRadius: AppRadii.button,
         color: Colors.transparent,
         border: Border.all(
-          color: isEnabled ? AppColors.border : AppColors.disabled,
+          color: isEnabled ? AppColors.borderFor(context) : disabledColor,
           width: 1.5,
         ),
       ),
@@ -148,7 +164,7 @@ class _AppButtonState extends State<AppButton>
           end: Alignment.bottomRight,
           colors: isEnabled
               ? [AppColors.engagementOrange, const Color(0xFFC44920)]
-              : [AppColors.disabled, AppColors.disabled.withValues(alpha: 0.8)],
+              : [disabledColor, disabledColor.withValues(alpha: 0.8)],
         ),
         boxShadow: isEnabled && !_isPressed
             ? [
@@ -171,8 +187,8 @@ class _AppButtonState extends State<AppButton>
               color:
                   widget.tone == AppButtonTone.primary ||
                       widget.tone == AppButtonTone.danger
-                  ? AppColors.cleanWhite
-                  : AppColors.trustBlue,
+                  ? primaryTextColor
+                  : outlineTextColor,
             ),
           )
         : Row(
@@ -186,10 +202,10 @@ class _AppButtonState extends State<AppButton>
                   color:
                       widget.tone == AppButtonTone.primary ||
                           widget.tone == AppButtonTone.danger
-                      ? AppColors.cleanWhite
+                      ? primaryTextColor
                       : widget.tone == AppButtonTone.secondary
-                      ? AppColors.trustBlueDark
-                      : AppColors.trustBlue,
+                      ? secondaryTextColor
+                      : outlineTextColor,
                 ),
                 const SizedBox(width: AppSpacing.xs),
               ],

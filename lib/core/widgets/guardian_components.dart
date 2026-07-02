@@ -38,14 +38,21 @@ class GuardianLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textColor = onDark ? AppColors.cleanWhite : AppColors.trustBlue;
+    final isDarkTheme = AppColors.isDark(context);
+    final textColor = onDark
+        ? AppColors.cleanWhite
+        : isDarkTheme
+        ? AppColors.darkTextPrimary
+        : AppColors.trustBlue;
     final resolvedWidth = width ?? size;
     final resolvedHeight = height ?? size;
 
     // Increased padding to make the icon fit cleaner and look more professional
     final resolvedPadding = padding ?? EdgeInsets.all(size * 0.12);
 
-    final resolvedTransparent = transparent || (!onDark && backgroundColor == null && !glassmorphic);
+    final resolvedTransparent =
+        transparent ||
+        (!isDarkTheme && !onDark && backgroundColor == null && !glassmorphic);
 
     Color bg;
     if (resolvedTransparent) {
@@ -54,8 +61,10 @@ class GuardianLogo extends StatelessWidget {
       bg = backgroundColor!;
     } else if (glassmorphic) {
       bg = AppColors.cleanWhite.withValues(alpha: 0.15);
-    } else {
+    } else if (onDark) {
       bg = AppColors.cleanWhite;
+    } else {
+      bg = isDarkTheme ? AppColors.darkSurfaceElevated : AppColors.cleanWhite;
     }
 
     final borderRad = borderRadius ?? (size * 0.22);
@@ -69,14 +78,17 @@ class GuardianLogo extends StatelessWidget {
         padding: resolvedPadding,
         decoration: BoxDecoration(
           color: bg,
-          borderRadius: resolvedTransparent ? null : BorderRadius.circular(borderRad),
+          borderRadius: resolvedTransparent
+              ? null
+              : BorderRadius.circular(borderRad),
           border: glassmorphic
               ? Border.all(
                   color: AppColors.cleanWhite.withValues(alpha: 0.25),
                   width: 1.5,
                 )
               : null,
-          boxShadow: onDark && !resolvedTransparent && !glassmorphic
+          boxShadow:
+              isDarkTheme && !onDark && !resolvedTransparent && !glassmorphic
               ? AppElevation.soft
               : null,
         ),
@@ -87,7 +99,11 @@ class GuardianLogo extends StatelessWidget {
           excludeFromSemantics: true,
           errorBuilder: (context, error, stackTrace) => Icon(
             Icons.shield_rounded,
-            color: onDark ? AppColors.cleanWhite : AppColors.trustBlue,
+            color: resolvedTransparent && onDark
+                ? AppColors.cleanWhite
+                : isDarkTheme && !onDark
+                ? AppColors.darkTextPrimary
+                : AppColors.trustBlue,
             size: size * 0.72,
           ),
         ),
@@ -109,7 +125,7 @@ class GuardianLogo extends StatelessWidget {
           style: Theme.of(context).textTheme.displayMedium?.copyWith(
             color: textColor,
             fontWeight: FontWeight.w900,
-            letterSpacing: -0.8,
+            letterSpacing: 0,
           ),
         ),
       ],
@@ -135,6 +151,7 @@ class GuardianAppBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md,
@@ -165,7 +182,7 @@ class GuardianAppBar extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: AppColors.textPrimary,
+                    color: colors.onSurface,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -175,7 +192,7 @@ class GuardianAppBar extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
+                      color: colors.onSurfaceVariant,
                     ),
                   ),
               ],
@@ -206,11 +223,12 @@ class QuickActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Semantics(
       button: true,
       label: label,
       child: Material(
-        color: AppColors.surface,
+        color: colors.surface,
         borderRadius: AppRadii.card,
         child: InkWell(
           onTap: onTap,
@@ -218,9 +236,9 @@ class QuickActionTile extends StatelessWidget {
           child: Ink(
             padding: const EdgeInsets.all(AppSpacing.sm),
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: colors.surface,
               borderRadius: AppRadii.card,
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: colors.outlineVariant),
               boxShadow: AppElevation.soft,
             ),
             child: Column(
@@ -242,7 +260,7 @@ class QuickActionTile extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: AppColors.textPrimary,
+                    color: colors.onSurface,
                     fontWeight: FontWeight.w800,
                     fontSize: 12,
                     height: 1.1,
@@ -285,8 +303,14 @@ class EmergencyCategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final titleColor =
+        color == AppColors.communityYellow && !AppColors.isDark(context)
+        ? AppColors.textPrimary
+        : color;
+
     return Material(
-      color: AppColors.surface,
+      color: colors.surface,
       borderRadius: AppRadii.card,
       child: InkWell(
         onTap: onTap,
@@ -315,9 +339,7 @@ class EmergencyCategoryCard extends StatelessWidget {
               Text(
                 title,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: color == AppColors.communityYellow
-                      ? AppColors.textPrimary
-                      : color,
+                  color: titleColor,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -327,7 +349,7 @@ class EmergencyCategoryCard extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSecondary,
+                  color: colors.onSurfaceVariant,
                   height: 1.2,
                 ),
               ),
@@ -355,6 +377,7 @@ class AlertProgressStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     final icon = switch (tone) {
       StatusTone.success => Icons.check_circle_rounded,
       StatusTone.warning => Icons.schedule_rounded,
@@ -384,7 +407,7 @@ class AlertProgressStep extends StatelessWidget {
           child: Text(
             label,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppColors.textPrimary,
+              color: colors.onSurface,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -393,7 +416,7 @@ class AlertProgressStep extends StatelessWidget {
           status,
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
             color: color == AppColors.communityYellow
-                ? AppColors.textSecondary
+                ? colors.onSurfaceVariant
                 : color,
             fontWeight: FontWeight.w800,
           ),
@@ -415,12 +438,13 @@ class AlertDetailsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: colors.surface,
         borderRadius: AppRadii.card,
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: colors.outlineVariant),
         boxShadow: AppElevation.soft,
       ),
       child: Column(
@@ -449,7 +473,7 @@ class AlertDetailsCard extends StatelessWidget {
                       entry.value,
                       textAlign: TextAlign.right,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textPrimary,
+                        color: colors.onSurface,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -551,6 +575,13 @@ class ProfileStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = AppColors.isDark(context)
+        ? AppColors.darkTextPrimary
+        : AppColors.textPrimary;
+    final tertiaryColor = AppColors.isDark(context)
+        ? AppColors.darkTextTertiary
+        : AppColors.textTertiary;
+
     return Expanded(
       child: Column(
         children: [
@@ -558,7 +589,7 @@ class ProfileStatCard extends StatelessWidget {
             value,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w900,
-              color: onDark ? AppColors.cleanWhite : AppColors.textPrimary,
+              color: onDark ? AppColors.cleanWhite : primaryColor,
             ),
           ),
           const SizedBox(height: 2),
@@ -567,7 +598,7 @@ class ProfileStatCard extends StatelessWidget {
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: onDark
                   ? AppColors.cleanWhite.withValues(alpha: 0.75)
-                  : AppColors.textTertiary,
+                  : tertiaryColor,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -591,10 +622,11 @@ class SegmentedTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: AppColors.backgroundAlt,
+        color: AppColors.backgroundAltFor(context),
         borderRadius: AppRadii.pill,
       ),
       child: Row(
@@ -616,7 +648,7 @@ class SegmentedTabs extends StatelessWidget {
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: isSelected
                         ? AppColors.cleanWhite
-                        : AppColors.textSecondary,
+                        : colors.onSurfaceVariant,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -643,6 +675,7 @@ class AppBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     final items = [
       _BottomNavItem(Icons.home_outlined, Icons.home_rounded, 'Home', 0),
       _BottomNavItem(
@@ -672,8 +705,8 @@ class AppBottomNav extends StatelessWidget {
         height: 76,
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
         decoration: BoxDecoration(
-          color: AppColors.cleanWhite,
-          border: const Border(top: BorderSide(color: AppColors.divider)),
+          color: AppColors.elevatedSurfaceFor(context),
+          border: Border(top: BorderSide(color: colors.outlineVariant)),
           boxShadow: AppElevation.soft,
         ),
         child: Row(
@@ -747,6 +780,10 @@ class _NavButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isSelected = current == item.index;
+    final selectedColor = AppColors.isDark(context)
+        ? Theme.of(context).colorScheme.primary
+        : AppColors.trustBlue;
+    final unselectedColor = AppColors.textTertiaryFor(context);
 
     return InkWell(
       onTap: () => onTap(item.index),
@@ -758,7 +795,7 @@ class _NavButton extends StatelessWidget {
           children: [
             Icon(
               isSelected ? item.selectedIcon : item.icon,
-              color: isSelected ? AppColors.trustBlue : AppColors.textTertiary,
+              color: isSelected ? selectedColor : unselectedColor,
               size: 22,
             ),
             const SizedBox(height: 3),
@@ -767,9 +804,7 @@ class _NavButton extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: isSelected
-                    ? AppColors.trustBlue
-                    : AppColors.textTertiary,
+                color: isSelected ? selectedColor : unselectedColor,
                 fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
                 fontSize: 10,
               ),

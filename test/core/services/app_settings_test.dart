@@ -29,4 +29,15 @@ void main() {
     expect(AppSettings.instance.textSize, AppTextSize.large);
     expect(AppSettings.instance.showSafetyTips, isFalse);
   });
+
+  test('user map style persists', () async {
+    expect(AppPreferences.userMapType, 'hybrid3d');
+
+    await AppPreferences.setUserMapType('terrain');
+    expect(AppPreferences.userMapType, 'terrain');
+
+    AppPreferences.resetForTesting();
+    await AppPreferences.ensureInitialized();
+    expect(AppPreferences.userMapType, 'terrain');
+  });
 }

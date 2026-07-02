@@ -95,9 +95,10 @@ class _BenefitsCarouselState extends State<BenefitsCarousel> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       height: 200,
-      color: AppColors.surface, // Clean background
+      color: colors.surface,
       child: Column(
         children: [
           Expanded(
@@ -123,19 +124,19 @@ class _BenefitsCarouselState extends State<BenefitsCarousel> {
                       const SizedBox(height: 12),
                       Text(
                         slide.title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.trustBlue,
+                          color: colors.primary,
                         ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 8),
                       Text(
                         slide.description,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
-                          color: AppColors.textSecondary,
+                          color: colors.onSurfaceVariant,
                         ),
                         textAlign: TextAlign.center,
                         maxLines: 2,
@@ -161,7 +162,7 @@ class _BenefitsCarouselState extends State<BenefitsCarousel> {
                   decoration: BoxDecoration(
                     color: _currentPage == index
                         ? AppColors.trustBlue
-                        : AppColors.divider,
+                        : colors.outlineVariant,
                     borderRadius: BorderRadius.circular(4.0),
                   ),
                 ),

@@ -487,6 +487,7 @@ class _WhatsappVerificationScreenState
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     final isExpired = _status == 'expired';
     final isFailed = _status == 'failed';
     final showWarning =
@@ -513,10 +514,14 @@ class _WhatsappVerificationScreenState
               height: 86,
               decoration: BoxDecoration(
                 color: isExpired
-                    ? AppColors.communityYellowSurface
-                    : AppColors.safetyGreenSurface,
+                    ? (AppColors.isDark(context)
+                          ? const Color(0xFF332B12)
+                          : AppColors.communityYellowSurface)
+                    : (AppColors.isDark(context)
+                          ? const Color(0xFF0F2D24)
+                          : AppColors.safetyGreenSurface),
                 borderRadius: AppRadii.card,
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: colors.outlineVariant),
               ),
               child: Icon(
                 isExpired
@@ -534,7 +539,7 @@ class _WhatsappVerificationScreenState
             'Tap the button below to send your verification message on WhatsApp. Once sent, this page will update automatically.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: AppColors.textSecondary,
+              color: colors.onSurfaceVariant,
               fontWeight: FontWeight.w700,
               height: 1.45,
             ),
@@ -543,16 +548,16 @@ class _WhatsappVerificationScreenState
           Container(
             padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: colors.surface,
               borderRadius: AppRadii.card,
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: colors.outlineVariant),
             ),
             child: Column(
               children: [
                 Text(
                   'Verification message',
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: AppColors.textSecondary,
+                    color: colors.onSurfaceVariant,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -561,7 +566,7 @@ class _WhatsappVerificationScreenState
                   _token,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: AppColors.trustBlueDark,
+                    color: colors.primary,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0,
                   ),
@@ -600,14 +605,14 @@ class _WhatsappVerificationScreenState
                   Text(
                     'Last checked: ${_formatLastChecked()}',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textTertiary,
+                      color: AppColors.textTertiaryFor(context),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   Text(
                     'Checking every 3 seconds',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textTertiary,
+                      color: AppColors.textTertiaryFor(context),
                       fontWeight: FontWeight.w600,
                     ),
                   ),

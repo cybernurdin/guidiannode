@@ -103,6 +103,30 @@ class EmergencyApiService {
     );
   }
 
+  static Future<Map<String, dynamic>> respondToAlert({
+    required String alertId,
+    String status = 'on_the_way',
+    PositionSnapshot? responderLocation,
+  }) async {
+    final response = await _request(
+      'POST',
+      '/api/alerts/$alertId/respond',
+      body: {
+        'status': status,
+        if (responderLocation != null) ...{
+          'latitude': responderLocation.latitude,
+          'longitude': responderLocation.longitude,
+          'accuracy': responderLocation.accuracy,
+          'heading': responderLocation.heading,
+          'speed': responderLocation.speed,
+          'source': 'device',
+        },
+      },
+    );
+
+    return Map<String, dynamic>.from(response['data'] as Map? ?? const {});
+  }
+
   static Future<Map<String, dynamic>> _request(
     String method,
     String path, {

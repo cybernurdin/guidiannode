@@ -24,6 +24,7 @@ class SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -35,7 +36,7 @@ class SectionHeader extends StatelessWidget {
                 title,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w800,
-                  letterSpacing: -0.3,
+                  letterSpacing: 0,
                 ),
               ),
               if (subtitle != null) ...[
@@ -43,7 +44,7 @@ class SectionHeader extends StatelessWidget {
                 Text(
                   subtitle!,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
+                    color: colors.onSurfaceVariant,
                     height: 1.35,
                   ),
                 ),
@@ -100,14 +101,15 @@ class ActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return _ScaleFeedback(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: colors.surface,
           borderRadius: AppRadii.card,
-          border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+          border: Border.all(color: colors.outlineVariant),
           boxShadow: AppElevation.soft,
         ),
         child: Column(
@@ -131,7 +133,7 @@ class ActionTile extends StatelessWidget {
               title,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w700,
-                letterSpacing: -0.2,
+                letterSpacing: 0,
               ),
             ),
             const SizedBox(height: AppSpacing.xxs),
@@ -140,7 +142,7 @@ class ActionTile extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.textSecondary,
+                color: colors.onSurfaceVariant,
                 fontSize: 11.5,
                 height: 1.25,
               ),
@@ -170,19 +172,29 @@ class StatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = AppColors.isDark(context);
     final palette = switch (tone) {
-      StatusTone.success => AppColors.safetyGreenSurface,
-      StatusTone.warning => AppColors.communityYellowSurface,
-      StatusTone.error => AppColors.errorSurface,
-      StatusTone.info => AppColors.trustBlueSurface,
-      StatusTone.action => AppColors.engagementOrangeSurface,
+      StatusTone.success =>
+        isDark ? const Color(0xFF0F2D24) : AppColors.safetyGreenSurface,
+      StatusTone.warning =>
+        isDark ? const Color(0xFF332B12) : AppColors.communityYellowSurface,
+      StatusTone.error =>
+        isDark ? const Color(0xFF3A1718) : AppColors.errorSurface,
+      StatusTone.info =>
+        isDark ? const Color(0xFF112642) : AppColors.trustBlueSurface,
+      StatusTone.action =>
+        isDark ? const Color(0xFF3A2118) : AppColors.engagementOrangeSurface,
     };
     final foreground = switch (tone) {
-      StatusTone.success => AppColors.safetyGreen,
-      StatusTone.warning => AppColors.textPrimary,
-      StatusTone.error => AppColors.error,
-      StatusTone.info => AppColors.trustBlueDark,
-      StatusTone.action => AppColors.engagementOrange,
+      StatusTone.success =>
+        isDark ? const Color(0xFF34D399) : AppColors.safetyGreen,
+      StatusTone.warning =>
+        isDark ? AppColors.communityYellow : AppColors.textPrimary,
+      StatusTone.error => isDark ? AppColors.darkError : AppColors.error,
+      StatusTone.info =>
+        isDark ? const Color(0xFF8DB7FF) : AppColors.trustBlueDark,
+      StatusTone.action =>
+        isDark ? const Color(0xFFFFB59B) : AppColors.engagementOrange,
     };
 
     return Container(
@@ -288,6 +300,7 @@ class ProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return _SurfaceCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -328,7 +341,7 @@ class ProfileCard extends StatelessWidget {
                     Text(
                       phoneNumber,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textSecondary,
+                        color: colors.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -348,18 +361,18 @@ class ProfileCard extends StatelessWidget {
               vertical: AppSpacing.sm,
             ),
             decoration: BoxDecoration(
-              color: AppColors.background,
+              color: AppColors.backgroundAltFor(context),
               borderRadius: BorderRadius.circular(AppRadii.xs),
               border: Border.all(
-                color: AppColors.border.withValues(alpha: 0.3),
+                color: colors.outlineVariant.withValues(alpha: 0.8),
               ),
             ),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.my_location_rounded,
                   size: 16,
-                  color: AppColors.textSecondary,
+                  color: colors.onSurfaceVariant,
                 ),
                 const SizedBox(width: AppSpacing.xs),
                 Expanded(
@@ -368,7 +381,7 @@ class ProfileCard extends StatelessWidget {
                         ? 'Neighborhood not set'
                         : neighborhood,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textPrimary,
+                      color: colors.onSurface,
                       fontWeight: FontWeight.w500,
                       fontSize: 13,
                     ),
@@ -397,6 +410,7 @@ class EmergencyContactCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return _SurfaceCard(
       child: Row(
         children: [
@@ -431,7 +445,7 @@ class EmergencyContactCard extends StatelessWidget {
                 Text(
                   phoneNumber,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
+                    color: colors.onSurfaceVariant,
                   ),
                 ),
                 if (relationship.isNotEmpty) ...[
@@ -442,7 +456,7 @@ class EmergencyContactCard extends StatelessWidget {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.backgroundAlt,
+                      color: AppColors.backgroundAltFor(context),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
@@ -489,12 +503,13 @@ class AlertCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     final cardContent = Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: colors.surface,
         borderRadius: AppRadii.card,
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+        border: Border.all(color: colors.outlineVariant),
         boxShadow: AppElevation.soft,
       ),
       child: Column(
@@ -508,7 +523,7 @@ class AlertCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: AppColors.background,
+                  color: AppColors.backgroundAltFor(context),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -516,7 +531,7 @@ class AlertCard extends StatelessWidget {
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textTertiary,
+                    color: colors.onSurfaceVariant,
                   ),
                 ),
               ),
@@ -527,31 +542,27 @@ class AlertCard extends StatelessWidget {
             title,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w800,
-              letterSpacing: -0.3,
+              letterSpacing: 0,
             ),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             subtitle,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppColors.textSecondary,
+              color: colors.onSurfaceVariant,
               height: 1.3,
             ),
           ),
           const SizedBox(height: AppSpacing.md),
           Row(
             children: [
-              const Icon(
-                Icons.near_me_rounded,
-                size: 14,
-                color: AppColors.trustBlue,
-              ),
+              Icon(Icons.near_me_rounded, size: 14, color: colors.primary),
               const SizedBox(width: AppSpacing.xs),
               Text(
                 distance,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
+                  color: colors.onSurfaceVariant,
                 ),
               ),
             ],
@@ -634,7 +645,7 @@ class ResponderCard extends StatelessWidget {
           Text(
             subtitle,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppColors.textSecondary,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               height: 1.35,
             ),
           ),
@@ -668,6 +679,7 @@ class SafeZoneCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     final innerContent = ListTile(
       dense: false,
       minVerticalPadding: 0,
@@ -698,11 +710,11 @@ class SafeZoneCard extends StatelessWidget {
         '$subtitle • $distance',
         style: Theme.of(
           context,
-        ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+        ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
       ),
-      trailing: const Icon(
+      trailing: Icon(
         Icons.chevron_right_rounded,
-        color: AppColors.textSecondary,
+        color: colors.onSurfaceVariant,
       ),
     );
 
@@ -732,6 +744,7 @@ class LocationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return _SurfaceCard(
       child: Row(
         children: [
@@ -762,7 +775,7 @@ class LocationCard extends StatelessWidget {
                 Text(
                   subtitle,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
+                    color: colors.onSurfaceVariant,
                   ),
                 ),
               ],

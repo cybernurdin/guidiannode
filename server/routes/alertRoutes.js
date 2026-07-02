@@ -6,6 +6,7 @@ const {
   alertIdParamSchema,
   createSosAlertSchema,
   nearbyAlertsQuerySchema,
+  respondToAlertSchema,
   responderFollowQuerySchema,
   updateAlertLocationSchema,
 } = require('../validation/alertSchemas');
@@ -32,6 +33,14 @@ router.get(
   validateRequest(alertIdParamSchema, 'params'),
   validateRequest(responderFollowQuerySchema, 'query'),
   alertController.getResponderFollowDetailsHandler
+);
+
+router.post(
+  '/:alertId/respond',
+  verifySession,
+  validateRequest(alertIdParamSchema, 'params'),
+  validateRequest(respondToAlertSchema),
+  alertController.respondToAlertHandler
 );
 
 router.post(

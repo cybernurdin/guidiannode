@@ -26,6 +26,13 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final iconBackground = AppColors.isDark(context)
+        ? AppColors.trustBlue.withValues(alpha: 0.2)
+        : AppColors.trustBlueSurface;
+    final iconColor = AppColors.isDark(context)
+        ? Theme.of(context).colorScheme.primary
+        : AppColors.trustBlueDark;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
@@ -35,11 +42,11 @@ class EmptyState extends StatelessWidget {
             Container(
               width: 72,
               height: 72,
-              decoration: const BoxDecoration(
-                color: AppColors.trustBlueSurface,
+              decoration: BoxDecoration(
+                color: iconBackground,
                 borderRadius: AppRadii.card,
               ),
-              child: Icon(icon, size: 36, color: AppColors.trustBlueDark),
+              child: Icon(icon, size: 36, color: iconColor),
             ),
             const SizedBox(height: AppSpacing.md),
             Text(title, style: Theme.of(context).textTheme.headlineSmall),
@@ -47,9 +54,9 @@ class EmptyState extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.textSecondaryFor(context),
+              ),
             ),
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: AppSpacing.lg),
@@ -131,7 +138,7 @@ class _LoadingPlaceholderState extends State<LoadingPlaceholder>
         width: widget.width,
         height: widget.height,
         decoration: BoxDecoration(
-          color: AppColors.backgroundAlt,
+          color: AppColors.backgroundAltFor(context),
           borderRadius: AppRadii.card,
         ),
       ),
@@ -146,6 +153,7 @@ class LoadingCardList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Column(
       children: List.generate(
         count,
@@ -156,9 +164,9 @@ class LoadingCardList extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: colors.surface,
               borderRadius: AppRadii.card,
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: colors.outlineVariant),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

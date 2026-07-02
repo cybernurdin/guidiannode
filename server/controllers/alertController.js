@@ -101,6 +101,32 @@ const getResponderFollowDetailsHandler = async (req, res) => {
   }
 };
 
+const respondToAlertHandler = async (req, res) => {
+  try {
+    const params = req.validated?.params ?? req.params;
+    const payload = req.validated?.body ?? req.body;
+    const response = await alertService.respondToAlert({
+      alertId: params.alertId,
+      responderId: req.user.id,
+      status: payload.status,
+      latitude: payload.latitude,
+      longitude: payload.longitude,
+      accuracy: payload.accuracy,
+      heading: payload.heading,
+      speed: payload.speed,
+      source: payload.source,
+    });
+
+    return sendSuccess(res, {
+      statusCode: 200,
+      message: 'Responder status synced successfully.',
+      data: response,
+    });
+  } catch (error) {
+    return sendError(res, error, { label: 'Respond To Alert Error' });
+  }
+};
+
 const resolveAlertHandler = async (req, res) => {
   try {
     const params = req.validated?.params ?? req.params;
@@ -123,6 +149,7 @@ module.exports = {
   createSosAlertHandler,
   getNearbyAlertsHandler,
   getResponderFollowDetailsHandler,
+  respondToAlertHandler,
   resolveAlertHandler,
   updateLiveAlertLocationHandler,
 };

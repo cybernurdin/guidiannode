@@ -380,7 +380,9 @@ class HelpCenterScreen extends StatelessWidget {
               'Select the appropriate category (general distress, medical, fire, or security). '
               'Responders and nearby trusted contacts will be notified with your live location. '
               'Keep location services enabled so responders can route to you.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.5),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(height: 1.5),
             ),
             const SizedBox(height: AppSpacing.lg),
             const SectionHeader(title: 'Account support'),
@@ -389,7 +391,9 @@ class HelpCenterScreen extends StatelessWidget {
               'Sign-in is permitted only for verified phone numbers registered in the system. '
               'If your session expires or you change devices, you can verify your number using WhatsApp. '
               'If you experience registration issues, verify that your phone is normalized correctly (e.g. +237 for Cameroon numbers).',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.5),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(height: 1.5),
             ),
             if (whatsapp.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.lg),
@@ -397,7 +401,10 @@ class HelpCenterScreen extends StatelessWidget {
               const SizedBox(height: AppSpacing.sm),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.chat_rounded, color: AppColors.safetyGreen),
+                leading: const Icon(
+                  Icons.chat_rounded,
+                  color: AppColors.safetyGreen,
+                ),
                 title: const Text('WhatsApp Support'),
                 subtitle: Text('+$whatsapp'),
                 onTap: () async {
@@ -413,15 +420,19 @@ class HelpCenterScreen extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             const _FaqTile(
               question: 'Why is my location state "using last known"?',
-              answer: 'GuardianNode displays this when the device is unable to fetch a fresh GPS snapshot, using your last synchronized profile location as backup. Tap the refresh button to force update.',
+              answer:
+                  'GuardianNode displays this when the device is unable to fetch a fresh GPS snapshot, using your last synchronized profile location as backup. Tap the refresh button to force update.',
             ),
             const _FaqTile(
-              question: 'Does GuardianNode track my location in the background?',
-              answer: 'Location updates are only actively streamed during active SOS sessions. Passive checks are periodic and privacy-respecting.',
+              question:
+                  'Does GuardianNode track my location in the background?',
+              answer:
+                  'Location updates are only actively streamed during active SOS sessions. Passive checks are periodic and privacy-respecting.',
             ),
             const _FaqTile(
               question: 'How do I change my emergency contact?',
-              answer: 'Go to your Profile tab (last icon in bottom navigation) to edit your emergency contact details, relationship, and neighborhood settings.',
+              answer:
+                  'Go to your Profile tab (last icon in bottom navigation) to edit your emergency contact details, relationship, and neighborhood settings.',
             ),
             const SizedBox(height: AppSpacing.xl),
             FilledButton(
@@ -456,23 +467,34 @@ class _FaqTileState extends State<_FaqTile> {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: AppRadii.card,
-        side: const BorderSide(color: AppColors.border),
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: ExpansionTile(
         title: Text(
           widget.question,
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
         ),
         trailing: Icon(
-          _expanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+          _expanded
+              ? Icons.keyboard_arrow_up_rounded
+              : Icons.keyboard_arrow_down_rounded,
         ),
         onExpansionChanged: (val) => setState(() => _expanded = val),
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.md),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              0,
+              AppSpacing.md,
+              AppSpacing.md,
+            ),
             child: Text(
               widget.answer,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.5),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(height: 1.5),
             ),
           ),
         ],
@@ -518,17 +540,20 @@ class AboutScreen extends StatelessWidget {
               Text(
                 'Bamenda emergency alert app',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppColors.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontStyle: FontStyle.italic,
                 ),
               ),
               const SizedBox(height: AppSpacing.xl),
-              const Divider(color: AppColors.border),
+              Divider(color: Theme.of(context).colorScheme.outlineVariant),
               const SizedBox(height: AppSpacing.md),
               const ListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text('Version'),
-                trailing: Text('1.0.0 (build 1)', style: TextStyle(fontWeight: FontWeight.bold)),
+                trailing: Text(
+                  '1.0.0 (build 1)',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
@@ -539,7 +564,8 @@ class AboutScreen extends StatelessWidget {
                     MaterialPageRoute<void>(
                       builder: (_) => const LegalDocumentScreen(
                         title: 'Privacy Policy',
-                        content: 'GuardianNode stores account details, emergency contact information, and emergency-related location updates to support SOS response, WhatsApp verification, and realtime routing.',
+                        content:
+                            'GuardianNode stores account details, emergency contact information, and emergency-related location updates to support SOS response, WhatsApp verification, and realtime routing.',
                       ),
                     ),
                   );

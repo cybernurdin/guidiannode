@@ -142,7 +142,7 @@ class _ActiveSosMapScreenState extends State<ActiveSosMapScreen> {
     );
 
     return Scaffold(
-      backgroundColor: AppColors.cleanWhite,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: ListView(
           padding: AppSpacing.screenPadding,
@@ -266,7 +266,7 @@ class _ResolvedView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.cleanWhite,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: ListView(
           padding: AppSpacing.screenPadding,
@@ -303,7 +303,7 @@ class _ResolvedView extends StatelessWidget {
                     "We're glad you're safe.\nThank you to the community responders.",
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textSecondary,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       height: 1.4,
                     ),
                   ),

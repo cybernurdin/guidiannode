@@ -31,6 +31,19 @@ class AppColors {
   static const Color disabled = Color(0xFFBBC6D4);
   static const Color shadow = Color(0xFF10213D);
 
+  static const Color darkBackground = Color(0xFF08111E);
+  static const Color darkBackgroundAlt = Color(0xFF0C1626);
+  static const Color darkSurface = Color(0xFF101B2D);
+  static const Color darkSurfaceMuted = Color(0xFF111827);
+  static const Color darkSurfaceElevated = Color(0xFF162238);
+  static const Color darkTextPrimary = Color(0xFFF8FAFC);
+  static const Color darkTextSecondary = Color(0xFFCBD5E1);
+  static const Color darkTextTertiary = Color(0xFF94A3B8);
+  static const Color darkBorder = Color(0xFF334155);
+  static const Color darkDivider = Color(0xFF263449);
+  static const Color darkDisabled = Color(0xFF64748B);
+  static const Color darkError = Color(0xFFEF4444);
+
   static const Color error = Color(0xFFE23D28);
   static const Color errorSurface = Color(0xFFFFECE8);
   static const Color success = safetyGreen;
@@ -44,4 +57,54 @@ class AppColors {
     trustBlueDark,
     Color(0xFF08204D),
   ];
+
+  static bool isDark(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark;
+
+  static Color scaffold(BuildContext context) =>
+      isDark(context) ? darkBackground : background;
+
+  static Color backgroundFor(BuildContext context) =>
+      isDark(context) ? darkBackground : background;
+
+  static Color backgroundAltFor(BuildContext context) =>
+      isDark(context) ? darkBackgroundAlt : backgroundAlt;
+
+  static Color surfaceFor(BuildContext context) =>
+      isDark(context) ? darkSurface : surface;
+
+  static Color surfaceMutedFor(BuildContext context) =>
+      isDark(context) ? darkSurfaceMuted : surfaceMuted;
+
+  static Color elevatedSurfaceFor(BuildContext context) =>
+      isDark(context) ? darkSurfaceElevated : cleanWhite;
+
+  static Color textPrimaryFor(BuildContext context) =>
+      isDark(context) ? darkTextPrimary : textPrimary;
+
+  static Color textSecondaryFor(BuildContext context) =>
+      isDark(context) ? darkTextSecondary : textSecondary;
+
+  static Color textTertiaryFor(BuildContext context) =>
+      isDark(context) ? darkTextTertiary : textTertiary;
+
+  static Color borderFor(BuildContext context) =>
+      isDark(context) ? darkBorder : border;
+
+  static Color dividerFor(BuildContext context) =>
+      isDark(context) ? darkDivider : divider;
+
+  static Color disabledFor(BuildContext context) =>
+      isDark(context) ? darkDisabled : disabled;
+
+  static Color errorFor(BuildContext context) =>
+      isDark(context) ? darkError : error;
+
+  static Color overlaySurfaceFor(BuildContext context, {double alpha = 0.96}) =>
+      (isDark(context) ? darkSurfaceElevated : cleanWhite).withValues(
+        alpha: alpha,
+      );
+
+  static Color brandSurfaceFor(BuildContext context, Color color) =>
+      color.withValues(alpha: isDark(context) ? 0.18 : 0.1);
 }

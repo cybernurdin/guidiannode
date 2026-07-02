@@ -181,7 +181,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final profile = _profile!;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: _buildAppBar(showActions: true),
       body: SafeArea(
         child: ListView(

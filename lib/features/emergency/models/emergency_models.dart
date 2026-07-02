@@ -213,9 +213,11 @@ class EmergencyAlert {
   EmergencyAlert copyWith({
     double? latitude,
     double? longitude,
+    String? status,
     String? readableAddress,
     String? locality,
     DateTime? updatedAt,
+    DateTime? resolvedAt,
   }) {
     return EmergencyAlert(
       id: id,
@@ -224,13 +226,13 @@ class EmergencyAlert {
       description: description,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
-      status: status,
+      status: status ?? this.status,
       readableAddress: readableAddress ?? this.readableAddress,
       locality: locality ?? this.locality,
       distanceMeters: distanceMeters,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      resolvedAt: resolvedAt,
+      resolvedAt: resolvedAt ?? this.resolvedAt,
       victim: victim,
     );
   }

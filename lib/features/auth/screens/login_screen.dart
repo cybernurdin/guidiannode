@@ -210,6 +210,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return AuthScaffold(
       showBackButton: false,
       title: context.tr('welcome_back'),
@@ -243,7 +244,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 height: 40,
                 padding: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
-                  color: AppColors.backgroundAlt,
+                  color: AppColors.backgroundAltFor(context),
                   borderRadius: AppRadii.pill,
                 ),
                 child: Row(
@@ -251,8 +252,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     Expanded(
                       child: Container(
                         alignment: Alignment.center,
-                        decoration: const BoxDecoration(
-                          color: AppColors.cleanWhite,
+                        decoration: BoxDecoration(
+                          color: colors.surface,
                           borderRadius: AppRadii.pill,
                         ),
                         child: Text(
@@ -270,7 +271,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: Text(
                           'Email',
                           style: Theme.of(context).textTheme.labelMedium
-                              ?.copyWith(color: AppColors.textTertiary),
+                              ?.copyWith(color: colors.onSurfaceVariant),
                         ),
                       ),
                     ),
@@ -305,9 +306,9 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: AppSpacing.md),
             Container(
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: colors.surface,
                 borderRadius: AppRadii.card,
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: colors.outlineVariant),
               ),
               child: SwitchListTile.adaptive(
                 value: _isLocationEnabled,
