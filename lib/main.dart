@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'core/services/app_preferences.dart';
+import 'core/services/app_settings.dart';
 import 'core/services/session_service.dart';
 import 'core/theme/colors.dart';
 import 'core/theme/theme.dart';
@@ -12,6 +13,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   GoogleFonts.config.allowRuntimeFetching = false;
   await AppPreferences.ensureInitialized();
+  await AppSettings.instance.initialize();
   await SessionService.ensureInitialized();
   await SupabaseRealtimeService.instance.initialize();
   runApp(const GuardianNodeApp());
@@ -22,14 +24,28 @@ class GuardianNodeApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'GuardianNode',
-      theme: AppTheme.lightTheme,
-      home: const SplashScreen(),
-      debugShowCheckedModeBanner: false,
-      builder: (context, child) {
-        return _MobileAppShell(child: child ?? const SizedBox.shrink());
-      },
+    return AnimatedBuilder(
+      animation: AppSettings.instance,
+      builder: (context, _) => MaterialApp(
+        title: 'GuardianNode',
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: AppSettings.instance.themeMode,
+        locale: AppSettings.instance.locale,
+        home: const SplashScreen(),
+        debugShowCheckedModeBanner: false,
+        builder: (context, child) {
+          final mediaQuery = MediaQuery.of(context);
+          return MediaQuery(
+            data: mediaQuery.copyWith(
+              textScaler: TextScaler.linear(
+                AppSettings.instance.textScaleFactor,
+              ),
+            ),
+            child: _MobileAppShell(child: child ?? const SizedBox.shrink()),
+          );
+        },
+      ),
     );
   }
 }
@@ -56,8 +72,11 @@ class _MobileAppShell extends StatelessWidget {
         final isWide = availableWidth > 600;
         final appWidth = isWide ? _maxMobileWidth : availableWidth;
 
+        final colors = Theme.of(context).colorScheme;
+        final background = Theme.of(context).scaffoldBackgroundColor;
+
         return ColoredBox(
-          color: isWide ? AppColors.backgroundAlt : AppColors.cleanWhite,
+          color: isWide ? colors.surfaceContainer : background,
           child: Align(
             alignment: Alignment.topCenter,
             child: SizedBox(
@@ -69,7 +88,7 @@ class _MobileAppShell extends StatelessWidget {
                 ),
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: AppColors.cleanWhite,
+                    color: background,
                     boxShadow: isWide
                         ? [
                             BoxShadow(

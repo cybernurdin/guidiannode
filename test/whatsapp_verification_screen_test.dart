@@ -42,6 +42,8 @@ void main() {
             verificationId: 'verification-id',
             token: 'CM-ABCDE',
             whatsappUrl: 'https://example.com',
+            phoneNumber: '237600000000',
+            purpose: 'login',
             expiresAt: DateTime.now()
                 .add(const Duration(minutes: 10))
                 .toUtc()
@@ -95,6 +97,61 @@ void main() {
       expect(statusChecks, greaterThanOrEqualTo(2));
       expect(SessionService.isAuthenticated, isTrue);
       expect(find.text('Dashboard reached'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'shows create account action when login confirmation phone is unregistered',
+    (tester) async {
+      var policyCode = '';
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: WhatsappVerificationScreen(
+            verificationId: 'verification-id',
+            token: 'CM-ABCDE',
+            whatsappUrl: 'https://wa.me/237657262038?text=CM-ABCDE',
+            phoneNumber: '237600000000',
+            purpose: 'login',
+            expiresAt: DateTime.now()
+                .add(const Duration(minutes: 10))
+                .toUtc()
+                .toIso8601String(),
+            statusLoader: (_) async => {
+              'success': true,
+              'status': 'pending',
+              'verified': false,
+            },
+            whatsappLauncher: (_) async => true,
+            confirmClickLoader:
+                ({required verificationId, required phoneNumber}) async => {
+                  'success': false,
+                  'status': 'failed',
+                  'code': 'PHONE_NOT_REGISTERED',
+                  'message':
+                      'This phone number is not registered. Please create an account first.',
+                },
+            onRequestNew: () async => const {'success': false},
+            onAuthRuleFailure: (code) => policyCode = code,
+            onVerified: (_) async {},
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+      final openWhatsappButton = find.text('Open WhatsApp');
+      await tester.ensureVisible(openWhatsappButton);
+      await tester.tap(openWhatsappButton);
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Account Not Found'), findsOneWidget);
+      expect(find.text('Create account'), findsOneWidget);
+
+      await tester.tap(find.text('Create account'));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(policyCode, 'PHONE_NOT_REGISTERED');
+      expect(find.text('Account Not Found'), findsNothing);
     },
   );
 }

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/services/api_service.dart';
+import '../../../core/services/api_client.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/radii.dart';
 import '../../../core/theme/spacing.dart';
@@ -18,8 +19,13 @@ class WhatsappVerificationScreen extends StatefulWidget {
     required this.verificationId,
     required this.token,
     required this.whatsappUrl,
+    required this.phoneNumber,
+    required this.purpose,
     required this.onVerified,
     required this.onRequestNew,
+    this.onAuthRuleFailure,
+    this.confirmClickLoader,
+    this.whatsappLauncher,
     this.statusLoader,
     this.expiresAt,
     this.title = 'Verify with WhatsApp',
@@ -30,8 +36,17 @@ class WhatsappVerificationScreen extends StatefulWidget {
   final String verificationId;
   final String token;
   final String whatsappUrl;
+  final String phoneNumber;
+  final String purpose;
   final Future<void> Function(Map<String, dynamic>) onVerified;
   final Future<Map<String, dynamic>> Function() onRequestNew;
+  final void Function(String code)? onAuthRuleFailure;
+  final Future<Map<String, dynamic>> Function({
+    required String verificationId,
+    required String phoneNumber,
+  })?
+  confirmClickLoader;
+  final Future<bool> Function(Uri uri)? whatsappLauncher;
   final Future<Map<String, dynamic>> Function(String verificationId)?
   statusLoader;
   final String? expiresAt;
@@ -273,6 +288,105 @@ class _WhatsappVerificationScreenState
     }
   }
 
+  Future<void> _handleConfirmWhatsappClick() async {
+    try {
+      final response =
+          await (widget.confirmClickLoader ?? ApiService.confirmWhatsappClick)(
+            verificationId: _verificationId,
+            phoneNumber: widget.phoneNumber,
+          );
+
+      if (!mounted) return;
+
+      if (response['success'] == true) {
+        final session = _sessionFromVerifiedResponse(response);
+        if (session != null) {
+          _cancelTimers();
+          _logVerification('navigating to dashboard via confirm-click');
+          await widget.onVerified(session);
+          return;
+        }
+
+        _cancelTimers();
+        setState(() {
+          _status = 'failed';
+          _message =
+              'WhatsApp verification succeeded, but a secure session was not returned.';
+        });
+        return;
+      }
+
+      final code = response['code']?.toString();
+      if (code == 'PHONE_NOT_REGISTERED' ||
+          code == 'PHONE_ALREADY_EXISTS' ||
+          code == 'ACCOUNT_NOT_ALLOWED') {
+        await _showAuthRuleError(code!);
+        return;
+      }
+
+      StatusSnackbar.show(
+        context,
+        message:
+            response['message']?.toString() ??
+            'Verification could not be confirmed.',
+        tone: StatusTone.error,
+      );
+    } catch (e) {
+      _logVerification('confirm-whatsapp-click error: $e');
+      if (mounted) {
+        StatusSnackbar.show(
+          context,
+          message: ApiClient.friendlyMessage(e),
+          tone: StatusTone.error,
+        );
+      }
+    }
+  }
+
+  Future<void> _showAuthRuleError(String code) async {
+    _cancelTimers();
+    final isMissingAccount = code == 'PHONE_NOT_REGISTERED';
+    final isExistingAccount = code == 'PHONE_ALREADY_EXISTS';
+    final title = isMissingAccount
+        ? 'Account Not Found'
+        : isExistingAccount
+        ? 'Account Already Exists'
+        : 'Sign In Not Allowed';
+    final message = isMissingAccount
+        ? 'This phone number is not registered. Please create an account first.'
+        : isExistingAccount
+        ? 'This phone number is already registered. Please login instead.'
+        : 'This account is not allowed to sign in. Please contact support.';
+    final actionLabel = isMissingAccount
+        ? 'Create account'
+        : isExistingAccount
+        ? 'Go to login'
+        : 'Close';
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              final callback = widget.onAuthRuleFailure;
+              if (callback != null) {
+                callback(code);
+              } else {
+                Navigator.of(context).pop();
+              }
+            },
+            child: Text(actionLabel),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _openWhatsapp() async {
     setState(() {
       _isOpeningWhatsapp = true;
@@ -280,18 +394,23 @@ class _WhatsappVerificationScreenState
     });
 
     try {
-      final launched = await launchUrl(
-        Uri.parse(_whatsappUrl),
-        mode: LaunchMode.externalApplication,
-      );
+      final uri = Uri.parse(_whatsappUrl);
+      final launched = widget.whatsappLauncher != null
+          ? await widget.whatsappLauncher!(uri)
+          : await launchUrl(uri, mode: LaunchMode.externalApplication);
 
-      if (!launched && mounted) {
-        StatusSnackbar.show(
-          context,
-          message: 'WhatsApp could not be opened on this device.',
-          tone: StatusTone.error,
-        );
+      if (!launched) {
+        if (mounted) {
+          StatusSnackbar.show(
+            context,
+            message: 'WhatsApp could not be opened on this device.',
+            tone: StatusTone.error,
+          );
+        }
+        return;
       }
+
+      await _handleConfirmWhatsappClick();
     } finally {
       if (mounted) {
         setState(() => _isOpeningWhatsapp = false);
@@ -324,11 +443,15 @@ class _WhatsappVerificationScreenState
       final expiresAt =
           response['expiresAt']?.toString() ??
           response['expires_at']?.toString();
+      final purpose = response['purpose']?.toString();
 
-      if (verificationId == null || token == null || whatsappUrl == null) {
+      if (verificationId == null ||
+          token == null ||
+          whatsappUrl == null ||
+          (purpose != null && purpose != widget.purpose)) {
         StatusSnackbar.show(
           context,
-          message: 'The backend returned an incomplete verification link.',
+          message: 'The backend returned an invalid verification link.',
           tone: StatusTone.error,
         );
         return;
@@ -364,6 +487,7 @@ class _WhatsappVerificationScreenState
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     final isExpired = _status == 'expired';
     final isFailed = _status == 'failed';
     final showWarning =
@@ -390,10 +514,14 @@ class _WhatsappVerificationScreenState
               height: 86,
               decoration: BoxDecoration(
                 color: isExpired
-                    ? AppColors.communityYellowSurface
-                    : AppColors.safetyGreenSurface,
+                    ? (AppColors.isDark(context)
+                          ? const Color(0xFF332B12)
+                          : AppColors.communityYellowSurface)
+                    : (AppColors.isDark(context)
+                          ? const Color(0xFF0F2D24)
+                          : AppColors.safetyGreenSurface),
                 borderRadius: AppRadii.card,
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: colors.outlineVariant),
               ),
               child: Icon(
                 isExpired
@@ -411,7 +539,7 @@ class _WhatsappVerificationScreenState
             'Tap the button below to send your verification message on WhatsApp. Once sent, this page will update automatically.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: AppColors.textSecondary,
+              color: colors.onSurfaceVariant,
               fontWeight: FontWeight.w700,
               height: 1.45,
             ),
@@ -420,16 +548,16 @@ class _WhatsappVerificationScreenState
           Container(
             padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: colors.surface,
               borderRadius: AppRadii.card,
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: colors.outlineVariant),
             ),
             child: Column(
               children: [
                 Text(
                   'Verification message',
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: AppColors.textSecondary,
+                    color: colors.onSurfaceVariant,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -438,7 +566,7 @@ class _WhatsappVerificationScreenState
                   _token,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: AppColors.trustBlueDark,
+                    color: colors.primary,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0,
                   ),
@@ -477,14 +605,14 @@ class _WhatsappVerificationScreenState
                   Text(
                     'Last checked: ${_formatLastChecked()}',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textTertiary,
+                      color: AppColors.textTertiaryFor(context),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   Text(
                     'Checking every 3 seconds',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textTertiary,
+                      color: AppColors.textTertiaryFor(context),
                       fontWeight: FontWeight.w600,
                     ),
                   ),

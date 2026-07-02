@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/services/api_service.dart';
+import '../../../core/services/api_client.dart';
 import '../../../core/services/session_service.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/radii.dart';
@@ -185,6 +186,35 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       setState(() => _isLoading = false);
 
       if (response['success'] != true) {
+        if (response['code'] == 'PHONE_ALREADY_EXISTS') {
+          showDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            builder: (BuildContext dialogContext) {
+              return AlertDialog(
+                title: const Text('Account Already Exists'),
+                content: const Text(
+                  'This phone number is already registered. Please login instead.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    child: const Text('Cancel'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(dialogContext).pop();
+                      Navigator.of(context).pop(); // Go back to login screen
+                    },
+                    child: const Text('Go to login'),
+                  ),
+                ],
+              );
+            },
+          );
+          return;
+        }
+
         StatusSnackbar.show(
           context,
           message:
@@ -222,7 +252,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       setState(() => _isLoading = false);
       StatusSnackbar.show(
         context,
-        message: 'An error occurred: $error',
+        message: ApiClient.friendlyMessage(error),
         tone: StatusTone.error,
       );
     }
@@ -442,6 +472,106 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     };
   }
 
+  Future<void> _handleConfirmWhatsappClick() async {
+    final verification = _whatsappVerification;
+    if (verification == null) return;
+
+    try {
+      final response = await ApiService.confirmWhatsappClick(
+        verificationId: verification.verificationId,
+        phoneNumber: _phoneController.text.trim(),
+      );
+
+      if (!mounted) return;
+
+      if (response['success'] == true) {
+        final session = _sessionFromVerifiedResponse(response);
+        if (session != null) {
+          _cancelVerificationTimers();
+          _logVerification('navigating to dashboard via confirm-click');
+          await SessionService.setSession(session);
+          if (!mounted) return;
+          PostAuthFlow.routeAfterVerification(
+            context,
+            bootstrapLocationSharing: _enableLocationSharing,
+          );
+          return;
+        }
+
+        _cancelVerificationTimers();
+        setState(() {
+          _whatsappVerification = verification.copyWith(status: 'failed');
+          _verificationMessage =
+              'WhatsApp verification succeeded, but a secure session was not returned.';
+        });
+        return;
+      }
+
+      final code = response['code']?.toString();
+      if (code == 'PHONE_NOT_REGISTERED') {
+        _cancelVerificationTimers();
+        showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext dialogContext) {
+            return AlertDialog(
+              title: const Text('Account Not Found'),
+              content: const Text(
+                'This phone number is not registered. Please create an account first.',
+              ),
+              actions: [
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                    Navigator.of(context).pop(); // Go back
+                  },
+                  child: const Text('OK'),
+                ),
+              ],
+            );
+          },
+        );
+        return;
+      }
+
+      if (code == 'PHONE_ALREADY_EXISTS') {
+        _cancelVerificationTimers();
+        showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext dialogContext) {
+            return AlertDialog(
+              title: const Text('Account Already Exists'),
+              content: const Text(
+                'This phone number is already registered. Please login instead.',
+              ),
+              actions: [
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                    Navigator.of(context).pop(); // Go back
+                  },
+                  child: const Text('Go to login'),
+                ),
+              ],
+            );
+          },
+        );
+        return;
+      }
+
+      StatusSnackbar.show(
+        context,
+        message:
+            response['message']?.toString() ??
+            'Verification could not be confirmed.',
+        tone: StatusTone.error,
+      );
+    } catch (e) {
+      _logVerification('confirm-whatsapp-click error: $e');
+    }
+  }
+
   Future<void> _openWhatsappVerification() async {
     final verification = _whatsappVerification;
 
@@ -461,13 +591,18 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         mode: LaunchMode.externalApplication,
       );
 
-      if (!launched && mounted) {
-        StatusSnackbar.show(
-          context,
-          message: 'WhatsApp could not be opened on this device.',
-          tone: StatusTone.error,
-        );
+      if (!launched) {
+        if (mounted) {
+          StatusSnackbar.show(
+            context,
+            message: 'WhatsApp could not be opened on this device.',
+            tone: StatusTone.error,
+          );
+        }
+        return;
       }
+
+      await _handleConfirmWhatsappClick();
     } catch (error) {
       if (!mounted) {
         return;
@@ -497,6 +632,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     BuildContext context,
     _WhatsappVerification verification,
   ) {
+    final colors = Theme.of(context).colorScheme;
     final isExpired = verification.status == 'expired';
     final isFailed = verification.status == 'failed';
     final showWarning =
@@ -511,10 +647,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             height: 86,
             decoration: BoxDecoration(
               color: isExpired
-                  ? AppColors.communityYellowSurface
-                  : AppColors.safetyGreenSurface,
+                  ? (AppColors.isDark(context)
+                        ? const Color(0xFF332B12)
+                        : AppColors.communityYellowSurface)
+                  : (AppColors.isDark(context)
+                        ? const Color(0xFF0F2D24)
+                        : AppColors.safetyGreenSurface),
               borderRadius: AppRadii.card,
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: colors.outlineVariant),
             ),
             child: Icon(
               isExpired
@@ -532,7 +672,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           'Tap the button below to send your verification message on WhatsApp. Once sent, this page will update automatically.',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: AppColors.textSecondary,
+            color: colors.onSurfaceVariant,
             fontWeight: FontWeight.w700,
             height: 1.45,
           ),
@@ -541,16 +681,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         Container(
           padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: colors.surface,
             borderRadius: AppRadii.card,
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: colors.outlineVariant),
           ),
           child: Column(
             children: [
               Text(
                 'Verification message',
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: AppColors.textSecondary,
+                  color: colors.onSurfaceVariant,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -559,7 +699,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 verification.token,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: AppColors.trustBlueDark,
+                  color: colors.primary,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 0,
                 ),
@@ -600,14 +740,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 Text(
                   'Last checked: ${_formatLastChecked()}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textTertiary,
+                    color: AppColors.textTertiaryFor(context),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 Text(
                   'Checking every 3 seconds',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textTertiary,
+                    color: AppColors.textTertiaryFor(context),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -748,9 +888,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             const SizedBox(height: AppSpacing.lg),
             Container(
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: Theme.of(context).colorScheme.surface,
                 borderRadius: AppRadii.card,
-                border: Border.all(color: AppColors.border),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                ),
               ),
               child: SwitchListTile.adaptive(
                 value: _enableLocationSharing,
@@ -832,9 +974,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             Container(
               padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: Theme.of(context).colorScheme.surface,
                 borderRadius: AppRadii.card,
-                border: Border.all(color: AppColors.border),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                ),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -910,6 +1054,7 @@ class _WhatsappVerification {
     required this.token,
     required this.expiresAt,
     required this.whatsappUrl,
+    required this.purpose,
     this.status = 'pending',
   });
 
@@ -917,6 +1062,7 @@ class _WhatsappVerification {
   final String token;
   final String expiresAt;
   final String whatsappUrl;
+  final String purpose;
   final String status;
 
   static _WhatsappVerification? fromResponse(Map<String, dynamic> response) {
@@ -927,6 +1073,7 @@ class _WhatsappVerification {
     final expiresAt =
         response['expiresAt']?.toString() ?? response['expires_at']?.toString();
     final whatsappUrl = response['whatsappUrl']?.toString();
+    final purpose = response['purpose']?.toString() ?? 'register';
 
     if (verificationId == null ||
         verificationId.isEmpty ||
@@ -935,7 +1082,8 @@ class _WhatsappVerification {
         expiresAt == null ||
         expiresAt.isEmpty ||
         whatsappUrl == null ||
-        whatsappUrl.isEmpty) {
+        whatsappUrl.isEmpty ||
+        purpose != 'register') {
       return null;
     }
 
@@ -944,6 +1092,7 @@ class _WhatsappVerification {
       token: token,
       expiresAt: expiresAt,
       whatsappUrl: whatsappUrl,
+      purpose: purpose,
       status: response['status']?.toString() ?? 'pending',
     );
   }
@@ -954,6 +1103,7 @@ class _WhatsappVerification {
       token: token,
       expiresAt: expiresAt,
       whatsappUrl: whatsappUrl,
+      purpose: purpose,
       status: status ?? this.status,
     );
   }

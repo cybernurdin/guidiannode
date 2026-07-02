@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/services/api_service.dart';
+import '../../../core/services/api_client.dart';
+import '../../../core/localization/app_strings.dart';
 import '../../../core/services/session_service.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/radii.dart';
@@ -86,6 +88,41 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _isLoading = false);
 
       if (response['success'] != true) {
+        if (response['code'] == 'PHONE_NOT_REGISTERED') {
+          showDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            builder: (BuildContext dialogContext) {
+              return AlertDialog(
+                title: const Text('Account Not Found'),
+                content: const Text(
+                  'This phone number is not registered. Please create an account first.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    child: const Text('Cancel'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(dialogContext).pop();
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => RegistrationScreen(
+                            prefillLocationEnabled: _isLocationEnabled,
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Text('Create account'),
+                  ),
+                ],
+              );
+            },
+          );
+          return;
+        }
+
         StatusSnackbar.show(
           context,
           message:
@@ -118,11 +155,26 @@ class _LoginScreenState extends State<LoginScreen> {
             verificationId: verificationId,
             token: token,
             whatsappUrl: whatsappUrl,
+            phoneNumber: phoneNumber,
+            purpose: 'login',
             expiresAt: expiresAt,
             title: 'Verify your login',
             subtitle:
                 'Send the prepared message from WhatsApp to securely continue.',
             onRequestNew: () => ApiService.startLoginVerification(phoneNumber),
+            onAuthRuleFailure: (code) {
+              Navigator.of(context).pop();
+
+              if (code == 'PHONE_NOT_REGISTERED') {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => RegistrationScreen(
+                      prefillLocationEnabled: _isLocationEnabled,
+                    ),
+                  ),
+                );
+              }
+            },
             onVerified: (session) async {
               await SessionService.setSession(session);
 
@@ -143,7 +195,7 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _isLoading = false);
       StatusSnackbar.show(
         context,
-        message: 'An error occurred: $error',
+        message: ApiClient.friendlyMessage(error),
         tone: StatusTone.error,
       );
     }
@@ -158,10 +210,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return AuthScaffold(
       showBackButton: false,
-      title: 'Welcome back!',
-      subtitle: 'Login to continue',
+      title: context.tr('welcome_back'),
+      subtitle: context.tr('login_continue'),
       badge: AuthHeroBadge(
         label: _isLocationEnabled ? 'Location ready' : 'WhatsApp sign-in',
         tone: _isLocationEnabled ? StatusTone.success : StatusTone.info,
@@ -191,7 +244,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 height: 40,
                 padding: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
-                  color: AppColors.backgroundAlt,
+                  color: AppColors.backgroundAltFor(context),
                   borderRadius: AppRadii.pill,
                 ),
                 child: Row(
@@ -199,8 +252,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     Expanded(
                       child: Container(
                         alignment: Alignment.center,
-                        decoration: const BoxDecoration(
-                          color: AppColors.cleanWhite,
+                        decoration: BoxDecoration(
+                          color: colors.surface,
                           borderRadius: AppRadii.pill,
                         ),
                         child: Text(
@@ -218,7 +271,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: Text(
                           'Email',
                           style: Theme.of(context).textTheme.labelMedium
-                              ?.copyWith(color: AppColors.textTertiary),
+                              ?.copyWith(color: colors.onSurfaceVariant),
                         ),
                       ),
                     ),
@@ -253,9 +306,9 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: AppSpacing.md),
             Container(
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: colors.surface,
                 borderRadius: AppRadii.card,
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: colors.outlineVariant),
               ),
               child: SwitchListTile.adaptive(
                 value: _isLocationEnabled,
@@ -274,7 +327,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: AppSpacing.xl),
             PrimaryButton(
-              text: 'Continue with WhatsApp',
+              text: context.tr('continue_whatsapp'),
               icon: Icons.chat_rounded,
               isLoading: _isLoading,
               onPressed: _handleLogin,

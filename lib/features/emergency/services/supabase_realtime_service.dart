@@ -91,6 +91,35 @@ class SupabaseRealtimeService {
     return channel;
   }
 
+  RealtimeChannel subscribeToAlertStatus({
+    required String alertId,
+    required void Function(Map<String, dynamic>) onChange,
+  }) {
+    final channel = _client.channel(
+      'guardian-node-alert-status-$alertId-${DateTime.now().millisecondsSinceEpoch}',
+    );
+
+    channel
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'alerts',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'id',
+            value: alertId,
+          ),
+          callback: (payload) {
+            if (payload.newRecord.isNotEmpty) {
+              onChange(payload.newRecord);
+            }
+          },
+        )
+        .subscribe();
+
+    return channel;
+  }
+
   RealtimeChannel subscribeToEmergencyFeed({
     required void Function() onMutation,
   }) {

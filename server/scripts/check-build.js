@@ -7,7 +7,11 @@ const files = [
   'services/userService.js',
   'services/whatsappVerificationService.js',
   'controllers/whatsappWebhookController.js',
+  'controllers/verificationController.js',
+  'middleware/rateLimits.js',
+  'routes/verificationRoutes.js',
   'scripts/test-live-verification-flow.js',
+  'scripts/test-auth-purpose-flow.js',
   'routes/legalRoutes.js',
 ];
 

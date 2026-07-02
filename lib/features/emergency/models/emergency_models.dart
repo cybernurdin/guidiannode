@@ -1,6 +1,17 @@
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+enum GuardianLocationStatus {
+  notRequested,
+  fetching,
+  ready,
+  usingLastKnown,
+  permissionDenied,
+  permissionDeniedForever,
+  serviceDisabled,
+  failed,
+}
+
 double? _toDouble(dynamic value) {
   if (value == null) {
     return null;
@@ -50,7 +61,7 @@ class PositionSnapshot {
       ? readableAddress!.trim()
       : locality?.trim().isNotEmpty == true
       ? locality!.trim()
-      : 'Location unavailable';
+      : 'Location ready';
 
   PositionSnapshot copyWith({
     double? latitude,
@@ -202,9 +213,11 @@ class EmergencyAlert {
   EmergencyAlert copyWith({
     double? latitude,
     double? longitude,
+    String? status,
     String? readableAddress,
     String? locality,
     DateTime? updatedAt,
+    DateTime? resolvedAt,
   }) {
     return EmergencyAlert(
       id: id,
@@ -213,13 +226,13 @@ class EmergencyAlert {
       description: description,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
-      status: status,
+      status: status ?? this.status,
       readableAddress: readableAddress ?? this.readableAddress,
       locality: locality ?? this.locality,
       distanceMeters: distanceMeters,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      resolvedAt: resolvedAt,
+      resolvedAt: resolvedAt ?? this.resolvedAt,
       victim: victim,
     );
   }
@@ -334,11 +347,13 @@ class FollowDetails {
 class LocationPermissionResult {
   const LocationPermissionResult({
     required this.granted,
+    this.status = GuardianLocationStatus.notRequested,
     this.message,
     this.snapshot,
   });
 
   final bool granted;
+  final GuardianLocationStatus status;
   final String? message;
   final PositionSnapshot? snapshot;
 }

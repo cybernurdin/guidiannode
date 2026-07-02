@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/colors.dart';
 import '../../../core/theme/spacing.dart';
 import '../../../core/widgets/guardian_components.dart';
 import '../../../core/widgets/status_widgets.dart';
@@ -20,9 +19,10 @@ class LegalDocumentScreen extends StatelessWidget {
     final sections = content
         .split('\n\n')
         .where((section) => section.isNotEmpty);
+    final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         titleSpacing: 0,
         title: Row(
@@ -49,7 +49,7 @@ class LegalDocumentScreen extends StatelessWidget {
                 child: Text(
                   section,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: AppColors.textPrimary,
+                    color: colors.onSurface,
                     height: 1.7,
                   ),
                 ),

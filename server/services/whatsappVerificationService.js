@@ -371,6 +371,30 @@ const updatePendingVerificationSession = async (verificationId, payload) => {
   );
 };
 
+const confirmWhatsappVerificationSession = async (otpSession) => {
+  if (otpSession.status === 'verified') {
+    return otpSession;
+  }
+
+  const confirmedAt = nowIso();
+  const metadata = {
+    ...(otpSession.metadata ?? {}),
+    whatsapp_click_confirmed_at: confirmedAt,
+  };
+  const updatedSession = await updatePendingVerificationSession(otpSession.id, {
+    status: 'verified',
+    verified_at: confirmedAt,
+    attempts: Math.max(otpSession.attempts ?? 0, 1),
+    metadata,
+  });
+
+  if (updatedSession) {
+    return updatedSession;
+  }
+
+  return resolveVerificationSessionStatus(otpSession.id);
+};
+
 const verifyIncomingWhatsappToken = async ({ token, senderPhoneNumber }) => {
   const normalizedToken = normalizeVerificationToken(token);
 
@@ -508,6 +532,7 @@ const verifyIncomingWhatsappToken = async ({ token, senderPhoneNumber }) => {
 module.exports = {
   WHATSAPP_INBOUND_METHOD,
   buildWhatsappUrl,
+  confirmWhatsappVerificationSession,
   createLoginVerification,
   createRegistrationVerification,
   extractVerificationToken,

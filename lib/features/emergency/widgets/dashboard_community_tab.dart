@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/colors.dart';
 import '../../../core/theme/spacing.dart';
 import '../../../core/widgets/cards.dart';
 import '../../../core/widgets/guardian_components.dart';
@@ -45,7 +44,7 @@ class _DashboardCommunityTabState extends State<DashboardCommunityTab> {
     };
 
     return Scaffold(
-      backgroundColor: AppColors.cleanWhite,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: ListView(
           padding: AppSpacing.screenPadding,

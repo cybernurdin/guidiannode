@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../../../core/config/app_config.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/api_client.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/radii.dart';
 import '../../../core/theme/spacing.dart';
@@ -151,7 +152,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       setState(() => _isLoading = false);
       StatusSnackbar.show(
         context,
-        message: 'An error occurred: $error',
+        message: ApiClient.friendlyMessage(error),
         tone: StatusTone.error,
       );
     }
@@ -206,7 +207,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       setState(() => _isLoading = false);
       StatusSnackbar.show(
         context,
-        message: 'An error occurred: $error',
+        message: ApiClient.friendlyMessage(error),
         tone: StatusTone.error,
       );
     }
@@ -214,6 +215,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     final showDebugHelper =
         AppConfig.showDebugOtpHelper &&
         _debugHelperMessage != null &&
@@ -230,9 +232,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               width: 82,
               height: 82,
               decoration: BoxDecoration(
-                color: AppColors.trustBlueSurface,
+                color: AppColors.isDark(context)
+                    ? const Color(0xFF112642)
+                    : AppColors.trustBlueSurface,
                 borderRadius: AppRadii.card,
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: colors.outlineVariant),
               ),
               child: const Icon(
                 Icons.mark_chat_read_outlined,
@@ -248,9 +252,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
           Container(
             padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: colors.surface,
               borderRadius: AppRadii.card,
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: colors.outlineVariant),
             ),
             child: LayoutBuilder(
               builder: (context, constraints) {
@@ -278,7 +282,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                           FilteringTextInputFormatter.digitsOnly,
                         ],
                         style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(color: AppColors.trustBlueDark),
+                            ?.copyWith(color: colors.primary),
                         decoration: const InputDecoration(
                           counterText: '',
                           contentPadding: EdgeInsets.symmetric(
@@ -302,7 +306,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: _resendRemaining > 0
                   ? AppColors.engagementOrange
-                  : AppColors.textSecondary,
+                  : colors.onSurfaceVariant,
               fontWeight: FontWeight.w800,
             ),
           ),

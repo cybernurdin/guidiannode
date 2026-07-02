@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/colors.dart';
 import '../../../core/theme/spacing.dart';
 import '../../../core/widgets/guardian_components.dart';
 import '../../../core/widgets/status_widgets.dart';
@@ -30,7 +29,7 @@ class AuthScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.cleanWhite,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -73,7 +72,7 @@ class AuthScaffold extends StatelessWidget {
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.labelMedium
                             ?.copyWith(
-                              color: AppColors.trustBlue,
+                              color: Theme.of(context).colorScheme.primary,
                               fontWeight: FontWeight.w900,
                             ),
                       ),
@@ -83,7 +82,7 @@ class AuthScaffold extends StatelessWidget {
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.headlineLarge
                           ?.copyWith(
-                            color: AppColors.trustBlue,
+                            color: Theme.of(context).colorScheme.primary,
                             fontWeight: FontWeight.w900,
                           ),
                     ),
@@ -92,7 +91,7 @@ class AuthScaffold extends StatelessWidget {
                       subtitle,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         height: 1.4,
                       ),
                     ),

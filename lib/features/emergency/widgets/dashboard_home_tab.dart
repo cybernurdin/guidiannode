@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/services/session_service.dart';
+import '../../../core/services/app_settings.dart';
+import '../../../core/localization/app_strings.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/elevation.dart';
 import '../../../core/theme/radii.dart';
@@ -51,8 +53,34 @@ class DashboardHomeTab extends StatelessWidget {
     final fullName = currentUser?['full_name']?.toString() ?? 'Resident';
     final firstName = fullName.split(' ').first;
     final activeAlert = coordinator.activeAlert;
-    final position = coordinator.currentPosition;
-    final locationText = position?.displayAddress ?? 'Market Road, Bamenda';
+    final locationText = switch (coordinator.locationStatus) {
+      GuardianLocationStatus.fetching => context.tr('getting_location'),
+      GuardianLocationStatus.ready => context.tr('location_ready'),
+      GuardianLocationStatus.usingLastKnown => context.tr(
+        'using_last_location',
+      ),
+      GuardianLocationStatus.permissionDenied => context.tr(
+        'location_permission_needed',
+      ),
+      GuardianLocationStatus.permissionDeniedForever => context.tr(
+        'location_disabled',
+      ),
+      GuardianLocationStatus.serviceDisabled => context.tr(
+        'location_services_off',
+      ),
+      GuardianLocationStatus.failed => context.tr('location_retry'),
+      GuardianLocationStatus.notRequested => context.tr('enable_location'),
+    };
+    final locationAction = switch (coordinator.locationStatus) {
+      GuardianLocationStatus.permissionDenied => context.tr('allow_location'),
+      GuardianLocationStatus.permissionDeniedForever => context.tr(
+        'open_settings',
+      ),
+      GuardianLocationStatus.serviceDisabled => context.tr('turn_on'),
+      GuardianLocationStatus.failed => context.tr('retry'),
+      GuardianLocationStatus.notRequested => context.tr('enable'),
+      _ => coordinator.locationSharingEnabled ? 'Refresh' : 'Enable',
+    };
 
     return RefreshIndicator(
       onRefresh: onRefresh,
@@ -71,16 +99,14 @@ class DashboardHomeTab extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 LocationCard(
-                  title: 'Current Location',
+                  title: context.tr('current_location'),
                   subtitle: locationText,
                   icon: Icons.location_on_rounded,
                   trailing: TextButton(
                     onPressed: coordinator.isUpdatingLocationSharing
                         ? null
                         : () => onToggleLocationSharing(true),
-                    child: Text(
-                      coordinator.locationSharingEnabled ? 'Change' : 'Enable',
-                    ),
+                    child: Text(locationAction),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
@@ -98,6 +124,14 @@ class DashboardHomeTab extends StatelessWidget {
                   ),
                 if (activeAlert != null || !coordinator.locationSharingEnabled)
                   const SizedBox(height: AppSpacing.lg),
+                if (AppSettings.instance.showSafetyTips) ...[
+                  StatusBanner.info(
+                    title: 'Safety tip',
+                    message:
+                        'Keep location enabled and stay where responders can reach you safely.',
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                ],
                 Center(
                   child: SosButton(
                     onPressed: activeAlert == null
@@ -105,8 +139,8 @@ class DashboardHomeTab extends StatelessWidget {
                         : onOpenActiveSos,
                     isBusy: coordinator.isTriggeringSos,
                     isSafeState: false,
-                    label: 'SOS',
-                    subtitle: 'TAP FOR HELP',
+                    label: context.tr('sos'),
+                    subtitle: context.tr('tap_for_help'),
                   ),
                 ),
                 if (activeAlert != null) ...[

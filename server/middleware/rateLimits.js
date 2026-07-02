@@ -29,7 +29,19 @@ const verificationStatusLimiter = rateLimit({
   ),
 });
 
+const verificationConfirmLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: 30,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  handler: buildRateLimitHandler(
+    'Too many verification confirmation attempts. Please wait before retrying.',
+    'verification_confirm_rate_limited'
+  ),
+});
+
 module.exports = {
+  verificationConfirmLimiter,
   verificationStartLimiter,
   verificationStatusLimiter,
 };

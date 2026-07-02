@@ -24,8 +24,9 @@ class OnboardingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: AppColors.cleanWhite,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: ListView(
           padding: AppSpacing.screenPadding,
@@ -52,7 +53,7 @@ class OnboardingScreen extends StatelessWidget {
             Text(
               'GuardianNode connects you to help and your community when it matters most.',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: AppColors.textSecondary,
+                color: colors.onSurfaceVariant,
                 height: 1.45,
                 fontWeight: FontWeight.w500,
               ),
@@ -90,7 +91,9 @@ class OnboardingScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: index == 0
                         ? AppColors.trustBlue
-                        : AppColors.disabled.withValues(alpha: 0.55),
+                        : AppColors.disabledFor(
+                            context,
+                          ).withValues(alpha: 0.55),
                     borderRadius: BorderRadius.circular(99),
                   ),
                 );
@@ -124,15 +127,16 @@ class _OnboardingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final foreground = color == AppColors.communityYellow
-        ? AppColors.textPrimary
+        ? AppColors.textPrimaryFor(context)
         : color;
+    final colors = Theme.of(context).colorScheme;
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.cleanWhite,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: colors.outlineVariant),
         boxShadow: [
           BoxShadow(
             color: AppColors.shadow.withValues(alpha: 0.07),
@@ -160,7 +164,7 @@ class _OnboardingCard extends StatelessWidget {
                 Text(
                   title,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppColors.textPrimary,
+                    color: colors.onSurface,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -168,7 +172,7 @@ class _OnboardingCard extends StatelessWidget {
                 Text(
                   message,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
+                    color: colors.onSurfaceVariant,
                     height: 1.25,
                   ),
                 ),

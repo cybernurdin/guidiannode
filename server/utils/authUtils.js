@@ -2,14 +2,17 @@ const crypto = require('crypto');
 
 const normalizePhoneNumber = (phoneNumber) => {
   const rawPhoneNumber = String(phoneNumber ?? '').trim();
-  const startsWithPlus = rawPhoneNumber.startsWith('+');
-  const digitsOnly = rawPhoneNumber.replace(/\D/g, '');
+  let digitsOnly = rawPhoneNumber.replace(/\D/g, '');
 
   if (!digitsOnly) {
     return '';
   }
 
-  return startsWithPlus ? `+${digitsOnly}` : digitsOnly;
+  if (digitsOnly.length === 9) {
+    digitsOnly = '237' + digitsOnly;
+  }
+
+  return digitsOnly;
 };
 
 const maskPhoneNumber = (phoneNumber) => {

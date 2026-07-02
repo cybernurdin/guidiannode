@@ -2,7 +2,7 @@ const crypto = require('crypto');
 
 const { supabaseAdmin } = require('../config/supabaseClient');
 const { AppError, wrapDatabaseError } = require('../utils/appError');
-const { nowIso } = require('../utils/authUtils');
+const { nowIso, normalizePhoneNumber } = require('../utils/authUtils');
 
 const USERS_TABLE = 'users';
 const EMERGENCY_CONTACTS_TABLE = 'emergency_contacts';
@@ -73,17 +73,28 @@ const getUserById = async (userId) => {
 };
 
 const getUserByPhoneNumber = async (phoneNumber) => {
+  const normalizedPhone = normalizePhoneNumber(phoneNumber);
+  const lookupCandidates = new Set([normalizedPhone, `+${normalizedPhone}`]);
+
+  if (normalizedPhone.startsWith('237') && normalizedPhone.length === 12) {
+    lookupCandidates.add(normalizedPhone.slice(3));
+  }
+
   const { data, error } = await supabaseAdmin
     .from(USERS_TABLE)
     .select('*')
-    .eq('phone_number', phoneNumber)
-    .maybeSingle();
+    .in('phone_number', [...lookupCandidates])
+    .limit(3);
 
   if (error) {
     throw wrapDatabaseError(error, USERS_TABLE);
   }
 
-  return data;
+  return (
+    (data ?? []).find(
+      (user) => normalizePhoneNumber(user.phone_number) === normalizedPhone
+    ) ?? null
+  );
 };
 
 const listAuthUsersPage = async (page) => {
@@ -105,12 +116,13 @@ const listAuthUsersPage = async (page) => {
 };
 
 const findAuthUserByPhoneNumber = async (phoneNumber) => {
+  const normalizedPhone = normalizePhoneNumber(phoneNumber);
   let currentPage = 1;
 
   while (currentPage) {
     const pageData = await listAuthUsersPage(currentPage);
     const users = Array.isArray(pageData?.users) ? pageData.users : [];
-    const matchingUser = users.find((user) => user.phone === phoneNumber);
+    const matchingUser = users.find((user) => normalizePhoneNumber(user.phone) === normalizedPhone);
 
     if (matchingUser) {
       return matchingUser;
@@ -133,8 +145,10 @@ const findAuthUserByPhoneNumber = async (phoneNumber) => {
 };
 
 const ensureAuthUserForPhoneNumber = async ({ phoneNumber, fullName }) => {
+  const normalizedPhone = normalizePhoneNumber(phoneNumber);
+  const authPhone = `+${normalizedPhone}`;
   const { data, error } = await supabaseAdmin.auth.admin.createUser({
-    phone: phoneNumber,
+    phone: authPhone,
     password: `${crypto.randomUUID()}Aa1!`,
     phone_confirm: true,
     user_metadata: {
@@ -155,7 +169,7 @@ const ensureAuthUserForPhoneNumber = async ({ phoneNumber, fullName }) => {
     errorMessage.includes('exists');
 
   if (looksLikeExistingAuthUser) {
-    const existingAuthUser = await findAuthUserByPhoneNumber(phoneNumber);
+    const existingAuthUser = await findAuthUserByPhoneNumber(normalizedPhone);
 
     if (existingAuthUser) {
       return existingAuthUser;
@@ -210,6 +224,23 @@ const saveUserProfile = async (userData) => {
     id,
     ...payload,
     created_at: nowIso(),
+  });
+};
+
+const saveNewVerifiedUserProfile = async (userData) => {
+  const verifiedAt = nowIso();
+
+  return insertWithCreatedAtFallback(USERS_TABLE, {
+    id: userData.id,
+    full_name: userData.full_name,
+    phone_number: normalizePhoneNumber(userData.phone_number),
+    quarter: userData.quarter,
+    location_permission: Boolean(userData.location_permission),
+    latitude: userData.location_permission ? userData.latitude ?? null : null,
+    longitude: userData.location_permission ? userData.longitude ?? null : null,
+    phone_verified: true,
+    phone_verified_at: verifiedAt,
+    created_at: verifiedAt,
   });
 };
 
@@ -328,6 +359,15 @@ const saveEmergencyContact = async (contactData) => {
   });
 };
 
+const saveNewEmergencyContact = async (contactData) =>
+  insertWithCreatedAtFallback(EMERGENCY_CONTACTS_TABLE, {
+    user_id: contactData.user_id,
+    contact_name: contactData.contact_name,
+    phone_number: normalizePhoneNumber(contactData.phone_number),
+    relationship: contactData.relationship,
+    created_at: nowIso(),
+  });
+
 const getUserProfile = async (userId) => {
   const user = await getUserById(userId);
 
@@ -388,6 +428,8 @@ module.exports = {
   getUserByPhoneNumber,
   markUserPhoneVerified,
   saveEmergencyContact,
+  saveNewEmergencyContact,
+  saveNewVerifiedUserProfile,
   saveUserProfile,
   updateUserProfile,
 };

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/colors.dart';
 import '../../../core/theme/spacing.dart';
 import '../../../core/widgets/cards.dart';
 import '../../../core/widgets/guardian_components.dart';
@@ -41,7 +40,7 @@ class _DashboardAlertsTabState extends State<DashboardAlertsTab> {
     };
 
     return Scaffold(
-      backgroundColor: AppColors.cleanWhite,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: widget.onRefresh,

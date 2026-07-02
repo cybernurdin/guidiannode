@@ -84,6 +84,19 @@ const responderFollowQuerySchema = z
     }
   });
 
+const respondToAlertSchema = z.object({
+  status: z
+    .enum(['accepted', 'on_the_way', 'arrived', 'cancelled', 'stopped'])
+    .optional()
+    .default('on_the_way'),
+  latitude: latitudeSchema.optional(),
+  longitude: longitudeSchema.optional(),
+  accuracy: optionalNumericSchema.optional(),
+  heading: optionalNumericSchema.optional(),
+  speed: optionalNumericSchema.optional(),
+  source: z.string().trim().min(2).max(50).optional().default('device'),
+});
+
 const alertIdParamSchema = z.object({
   alertId: z.string().trim().uuid('alertId must be a valid UUID'),
 });
@@ -92,6 +105,7 @@ module.exports = {
   alertIdParamSchema,
   createSosAlertSchema,
   nearbyAlertsQuerySchema,
+  respondToAlertSchema,
   responderFollowQuerySchema,
   updateAlertLocationSchema,
 };

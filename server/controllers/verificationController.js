@@ -13,6 +13,7 @@ const handleErrorResponse = (res, error, label) => {
 
   return res.status(statusCode).json({
     success: false,
+    status: 'failed',
     message,
     code: error.code,
     details: statusCode < 500 ? error.details ?? null : null,
@@ -31,6 +32,16 @@ const getVerificationStatusHandler = async (req, res) => {
   }
 };
 
+const confirmWhatsappClickHandler = async (req, res) => {
+  try {
+    const response = await authService.confirmWhatsappClick(req.validatedBody ?? req.body);
+    return res.status(200).json(response);
+  } catch (error) {
+    return handleErrorResponse(res, error, 'Confirm Whatsapp Click Error');
+  }
+};
+
 module.exports = {
   getVerificationStatusHandler,
+  confirmWhatsappClickHandler,
 };

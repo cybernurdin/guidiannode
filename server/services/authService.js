@@ -5,8 +5,28 @@ const otpService = require('./otpService');
 const { createAppSession } = require('./sessionService');
 const userService = require('./userService');
 const whatsappVerificationService = require('./whatsappVerificationService');
+const { normalizePhoneNumber } = require('../utils/authUtils');
 
 const verificationCompletionPromises = new Map();
+const ACCOUNT_NOT_ALLOWED_STATUSES = new Set([
+  'blocked',
+  'disabled',
+  'inactive',
+  'rejected',
+  'suspended',
+]);
+
+const assertAccountAllowed = (user) => {
+  const accountStatus = String(user?.account_status ?? '').toLowerCase();
+
+  if (ACCOUNT_NOT_ALLOWED_STATUSES.has(accountStatus)) {
+    throw new AppError(
+      'This account is not allowed to sign in. Please contact support.',
+      403,
+      'ACCOUNT_NOT_ALLOWED'
+    );
+  }
+};
 
 const buildOtpStartResponse = (otpSession, message) => ({
   success: true,
@@ -22,19 +42,26 @@ const buildOtpStartResponse = (otpSession, message) => ({
 
 const startLoginOtp = async ({ phone_number }) => {
   const startTime = Date.now();
-  const existingUser = await userService.getUserByPhoneNumber(phone_number);
+  const normalizedPhone = normalizePhoneNumber(phone_number);
+  const existingUser = await userService.getUserByPhoneNumber(normalizedPhone);
 
   if (!existingUser) {
-    throw new AppError('No account found for this phone number. Please register first.', 404, 'user_not_found');
+    throw new AppError(
+      'This phone number is not registered. Please create an account first.',
+      404,
+      'PHONE_NOT_REGISTERED'
+    );
   }
 
+  assertAccountAllowed(existingUser);
+
   const verification = await whatsappVerificationService.createLoginVerification(
-    phone_number,
+    normalizedPhone,
     existingUser.id
   );
   
   const duration = Date.now() - startTime;
-  console.log(`[auth] startLoginOtp for ${phone_number} completed in ${duration}ms`);
+  console.log(`[auth] startLoginOtp for ${normalizedPhone} completed in ${duration}ms`);
 
   return {
     ...buildWhatsappVerificationStartResponse(verification),
@@ -43,10 +70,25 @@ const startLoginOtp = async ({ phone_number }) => {
 };
 
 const startRegistrationOtp = async (registrationData) => {
+  const normalizedPhone = normalizePhoneNumber(registrationData.phone_number);
+  const existingUser = await userService.getUserByPhoneNumber(normalizedPhone);
+
+  if (existingUser) {
+    throw new AppError(
+      'This phone number is already registered. Please login instead.',
+      409,
+      'PHONE_ALREADY_EXISTS'
+    );
+  }
+
+  const normalizedData = {
+    ...registrationData,
+    phone_number: normalizedPhone,
+  };
   const otpSession = await otpService.createOtpSession({
-    phoneNumber: registrationData.phone_number,
+    phoneNumber: normalizedPhone,
     purpose: OTP_PURPOSE.REGISTER,
-    registrationPayload: registrationData,
+    registrationPayload: normalizedData,
   });
 
   return buildOtpStartResponse(
@@ -64,6 +106,7 @@ const buildWhatsappVerificationStartResponse = ({
   success: true,
   message: 'Registration details accepted. Continue with WhatsApp verification.',
   verificationId: otpSession.id,
+  purpose: normalizeOtpPurpose(otpSession.purpose),
   token,
   expiresAt,
   whatsappUrl,
@@ -75,8 +118,24 @@ const buildWhatsappVerificationStartResponse = ({
 
 const startRegistrationWhatsappVerification = async (registrationData) => {
   const startTime = Date.now();
+  const normalizedPhone = normalizePhoneNumber(registrationData.phone_number);
+
+  const existingUser = await userService.getUserByPhoneNumber(normalizedPhone);
+  if (existingUser) {
+    throw new AppError(
+      'This phone number is already registered. Please login instead.',
+      409,
+      'PHONE_ALREADY_EXISTS'
+    );
+  }
+
+  const normalizedData = {
+    ...registrationData,
+    phone_number: normalizedPhone,
+  };
+
   const verification = await whatsappVerificationService.createRegistrationVerification(
-    registrationData
+    normalizedData
   );
 
   const duration = Date.now() - startTime;
@@ -139,24 +198,37 @@ const buildAuthenticatedPayload = (user, emergencyContact, message) => {
   };
 };
 
-const finalizeRegistration = async (otpSession) => {
+const finalizeRegistration = async (
+  otpSession,
+  { phoneAvailabilityChecked = false } = {}
+) => {
   const registrationPayload = otpSession.registration_payload;
 
   if (!registrationPayload) {
     throw new AppError('Registration session is missing payload data.', 500, 'registration_payload_missing');
   }
 
-  const existingUser = await userService.getUserByPhoneNumber(otpSession.phone_number);
-  const userId =
-    existingUser?.id ||
-    (
-      await userService.ensureAuthUserForPhoneNumber({
-        phoneNumber: otpSession.phone_number,
-        fullName: registrationPayload.full_name,
-      })
-    ).id;
+  if (!phoneAvailabilityChecked) {
+    const existingUser = await userService.getUserByPhoneNumber(
+      otpSession.phone_number
+    );
+    if (existingUser) {
+      throw new AppError(
+        'This phone number is already registered. Please login instead.',
+        409,
+        'PHONE_ALREADY_EXISTS'
+      );
+    }
+  }
 
-  const user = await userService.saveUserProfile({
+  const userId = (
+    await userService.ensureAuthUserForPhoneNumber({
+      phoneNumber: otpSession.phone_number,
+      fullName: registrationPayload.full_name,
+    })
+  ).id;
+
+  const verifiedUser = await userService.saveNewVerifiedUserProfile({
     id: userId,
     full_name: registrationPayload.full_name,
     phone_number: otpSession.phone_number,
@@ -165,15 +237,12 @@ const finalizeRegistration = async (otpSession) => {
     latitude: registrationPayload.latitude ?? null,
     longitude: registrationPayload.longitude ?? null,
   });
-  const [verifiedUser, emergencyContact] = await Promise.all([
-    userService.markUserPhoneVerified(user),
-    userService.saveEmergencyContact({
-      user_id: user.id,
-      contact_name: registrationPayload.emergency_contact.contact_name,
-      phone_number: registrationPayload.emergency_contact.phone_number,
-      relationship: registrationPayload.emergency_contact.relationship,
-    }),
-  ]);
+  const emergencyContact = await userService.saveNewEmergencyContact({
+    user_id: userId,
+    contact_name: registrationPayload.emergency_contact.contact_name,
+    phone_number: registrationPayload.emergency_contact.phone_number,
+    relationship: registrationPayload.emergency_contact.relationship,
+  });
 
   return buildAuthenticatedPayload(
     verifiedUser,
@@ -182,15 +251,25 @@ const finalizeRegistration = async (otpSession) => {
   );
 };
 
-const finalizeLogin = async (otpSession) => {
-  let user = await userService.getUserByPhoneNumber(otpSession.phone_number);
+const finalizeLogin = async (otpSession, existingUser = null) => {
+  const user =
+    existingUser ??
+    (await userService.getUserByPhoneNumber(otpSession.phone_number));
 
   if (!user) {
-    throw new AppError('No registered profile exists for this phone number.', 404, 'user_not_found');
+    throw new AppError(
+      'This phone number is not registered. Please create an account first.',
+      404,
+      'PHONE_NOT_REGISTERED'
+    );
   }
 
+  assertAccountAllowed(user);
+
   const [verifiedUser, emergencyContact] = await Promise.all([
-    userService.markUserPhoneVerified(user),
+    user.phone_verified === true
+      ? user
+      : userService.markUserPhoneVerified(user),
     userService.getPrimaryEmergencyContact(user.id),
   ]);
 
@@ -226,7 +305,14 @@ const wasVerifiedBeforeExpiry = (otpSession) => {
   return expiresAt > Date.now();
 };
 
-const completeVerifiedOtpSession = async (otpSession) => {
+const completeVerifiedOtpSession = async (
+  otpSession,
+  {
+    existingUser = null,
+    registrationPhoneAvailabilityChecked = false,
+    deferAuthCompletionPersistence = false,
+  } = {}
+) => {
   if (!otpSession || otpSession.status !== 'verified') {
     throw new AppError(
       'Verification is not ready to complete authentication.',
@@ -259,34 +345,61 @@ const completeVerifiedOtpSession = async (otpSession) => {
 
   const completionPromise = (async () => {
     const otpPurpose = normalizeOtpPurpose(otpSession.purpose);
-    let response;
 
     if (otpPurpose === OTP_PURPOSE.REGISTER) {
-      response = await finalizeRegistration(otpSession);
-    } else if (otpPurpose === OTP_PURPOSE.LOGIN) {
-      response = await finalizeLogin(otpSession);
-    } else {
-      throw new AppError(
-        `Unsupported verification purpose: ${otpSession.purpose}`,
-        500,
-        'unsupported_verification_purpose'
-      );
+      return finalizeRegistration(otpSession, {
+        phoneAvailabilityChecked: registrationPhoneAvailabilityChecked,
+      });
     }
 
-    await whatsappVerificationService.saveVerificationAuthCompletion(
-      otpSession,
-      response.user
-    );
+    if (otpPurpose === OTP_PURPOSE.LOGIN) {
+      return finalizeLogin(otpSession, existingUser);
+    }
 
-    return response;
+    throw new AppError(
+      `Unsupported verification purpose: ${otpSession.purpose}`,
+      500,
+      'unsupported_verification_purpose'
+    );
   })();
 
   verificationCompletionPromises.set(otpSession.id, completionPromise);
 
   try {
-    return await completionPromise;
-  } finally {
+    const response = await completionPromise;
+    const persistencePromise =
+      whatsappVerificationService.saveVerificationAuthCompletion(
+        otpSession,
+        response.user
+      );
+
+    if (deferAuthCompletionPersistence) {
+      const trackedCompletion = persistencePromise.then(() => response);
+      verificationCompletionPromises.set(otpSession.id, trackedCompletion);
+      void trackedCompletion
+        .catch((error) => {
+          console.error(
+            `[auth] Failed to persist auth completion for verification ${otpSession.id}:`,
+            error
+          );
+        })
+        .finally(() => {
+          if (
+            verificationCompletionPromises.get(otpSession.id) ===
+            trackedCompletion
+          ) {
+            verificationCompletionPromises.delete(otpSession.id);
+          }
+        });
+      return response;
+    }
+
+    await persistencePromise;
     verificationCompletionPromises.delete(otpSession.id);
+    return response;
+  } catch (error) {
+    verificationCompletionPromises.delete(otpSession.id);
+    throw error;
   }
 };
 
@@ -428,8 +541,103 @@ const resendOtp = async ({ phone_number, otp_session_id }) => {
   return buildOtpStartResponse(otpSession, 'OTP resent successfully');
 };
 
+const confirmWhatsappClick = async ({
+  verificationId,
+  otp_session_id,
+  phone_number,
+}) => {
+  const startTime = Date.now();
+  const sessionId = verificationId || otp_session_id;
+  if (!sessionId) {
+    throw new AppError('Verification session ID is required.', 400, 'validation_error');
+  }
+
+  const normalizedPhone = normalizePhoneNumber(phone_number);
+  const [otpSession, matchedUser] = await Promise.all([
+    whatsappVerificationService.resolveVerificationSessionStatus(sessionId),
+    userService.getUserByPhoneNumber(normalizedPhone),
+  ]);
+  const otpPurpose = normalizeOtpPurpose(otpSession.purpose);
+  const sessionNormalizedPhone = normalizePhoneNumber(otpSession.phone_number);
+
+  if (normalizedPhone !== sessionNormalizedPhone) {
+    throw new AppError('Phone number does not match the verification session.', 400, 'phone_mismatch');
+  }
+
+  if (!['pending', 'verified'].includes(otpSession.status)) {
+    throw new AppError(
+      'This verification session can no longer be confirmed.',
+      409,
+      'verification_not_pending'
+    );
+  }
+
+  let existingUser = null;
+  const completedUser = getCompletedUserFromMetadata(otpSession);
+  const completionInProgress = isVerificationCompletionInProgress(otpSession.id);
+  let authResponse = null;
+
+  if (!completedUser && !completionInProgress && otpPurpose === OTP_PURPOSE.LOGIN) {
+    existingUser = matchedUser;
+    if (!existingUser) {
+      throw new AppError(
+        'This phone number is not registered. Please create an account first.',
+        404,
+        'PHONE_NOT_REGISTERED'
+      );
+    }
+    assertAccountAllowed(existingUser);
+  }
+
+  if (
+    !completedUser &&
+    !completionInProgress &&
+    otpPurpose === OTP_PURPOSE.REGISTER
+  ) {
+    if (matchedUser) {
+      throw new AppError(
+        'This phone number is already registered. Please login instead.',
+        409,
+        'PHONE_ALREADY_EXISTS'
+      );
+    }
+  }
+
+  const confirmedSession = completedUser || completionInProgress
+    ? otpSession
+    : await whatsappVerificationService.confirmWhatsappVerificationSession(
+        otpSession
+      );
+  authResponse = await completeVerifiedOtpSession(confirmedSession, {
+    existingUser,
+    registrationPhoneAvailabilityChecked:
+      !completedUser && otpPurpose === OTP_PURPOSE.REGISTER,
+    deferAuthCompletionPersistence: true,
+  });
+
+  const response = {
+    success: true,
+    verificationId: confirmedSession.id,
+    status: 'verified',
+    verified: true,
+    authReady: true,
+    purpose: otpPurpose === OTP_PURPOSE.LOGIN ? 'login' : 'register',
+    authToken: authResponse.session.access_token,
+    session: authResponse.session,
+    user: authResponse.user,
+    nextStep: 'dashboard',
+  };
+
+  console.log(
+    `[CONFIRM_WHATSAPP_CLICK] verificationId=${confirmedSession.id} purpose=${response.purpose} completedMs=${Date.now() - startTime}`
+  );
+
+  return response;
+};
+
 module.exports = {
   completeVerifiedOtpSession,
+  confirmWhatsappClick,
   getVerificationStatus,
   isVerificationCompletionInProgress,
   resendOtp,

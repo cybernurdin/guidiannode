@@ -53,8 +53,9 @@ class _PermissionsEducationScreenState
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: ListView(
           padding: AppSpacing.screenPadding,
@@ -70,8 +71,8 @@ class _PermissionsEducationScreenState
             const SizedBox(height: AppSpacing.xl),
             Container(
               padding: const EdgeInsets.all(AppSpacing.xl),
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
+              decoration: BoxDecoration(
+                color: colors.surface,
                 borderRadius: AppRadii.card,
               ),
               child: Column(
@@ -87,7 +88,7 @@ class _PermissionsEducationScreenState
                   Text(
                     'GuardianNode uses location to route nearby help, refresh live SOS positions, and show incidents around you. Your position is most important during an emergency.',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppColors.textSecondary,
+                      color: colors.onSurfaceVariant,
                       height: 1.45,
                     ),
                   ),
@@ -131,7 +132,7 @@ class _PermissionsEducationScreenState
       bottomNavigationBar: SafeArea(
         top: false,
         child: Container(
-          color: AppColors.background,
+          color: Theme.of(context).scaffoldBackgroundColor,
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.md,
             AppSpacing.sm,
@@ -178,12 +179,13 @@ class _PermissionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: colors.surface,
         borderRadius: AppRadii.card,
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: colors.outlineVariant),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -207,7 +209,7 @@ class _PermissionRow extends StatelessWidget {
                 Text(
                   message,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
+                    color: colors.onSurfaceVariant,
                   ),
                 ),
               ],

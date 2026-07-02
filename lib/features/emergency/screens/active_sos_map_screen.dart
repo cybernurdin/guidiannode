@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../../../core/services/api_client.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/radii.dart';
 import '../../../core/theme/spacing.dart';
@@ -100,7 +101,10 @@ class _ActiveSosMapScreenState extends State<ActiveSosMapScreen> {
       setState(() => _isResolving = false);
       StatusSnackbar.show(
         context,
-        message: error.toString().replaceFirst('Exception: ', ''),
+        message: ApiClient.friendlyMessage(
+          error,
+          fallback: 'The SOS could not be updated. Please try again.',
+        ),
         tone: StatusTone.error,
       );
     }
@@ -138,7 +142,7 @@ class _ActiveSosMapScreenState extends State<ActiveSosMapScreen> {
     );
 
     return Scaffold(
-      backgroundColor: AppColors.cleanWhite,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: ListView(
           padding: AppSpacing.screenPadding,
@@ -262,7 +266,7 @@ class _ResolvedView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.cleanWhite,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: ListView(
           padding: AppSpacing.screenPadding,
@@ -299,7 +303,7 @@ class _ResolvedView extends StatelessWidget {
                     "We're glad you're safe.\nThank you to the community responders.",
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textSecondary,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       height: 1.4,
                     ),
                   ),

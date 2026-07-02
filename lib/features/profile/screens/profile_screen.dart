@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../core/services/session_service.dart';
+import '../../../core/services/api_client.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/radii.dart';
 import '../../../core/theme/spacing.dart';
@@ -98,7 +99,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return;
       }
 
-      final message = error.toString().replaceFirst('Exception: ', '');
+      final message = ApiClient.friendlyMessage(error);
       setState(() {
         _isLoading = false;
         _loadError = message;
@@ -151,7 +152,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() => _isSaving = false);
       StatusSnackbar.show(
         context,
-        message: error.toString().replaceFirst('Exception: ', ''),
+        message: ApiClient.friendlyMessage(error),
         tone: StatusTone.error,
       );
     }
@@ -180,7 +181,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final profile = _profile!;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: _buildAppBar(showActions: true),
       body: SafeArea(
         child: ListView(
