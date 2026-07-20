@@ -1,0 +1,14 @@
+server/
+android/
+ios/
+linux/
+macos/
+windows/
+test/
+docs/
+screenshots/
+*.apk
+*.aab
+.env
+.env.*
+!.env.example

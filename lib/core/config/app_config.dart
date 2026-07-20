@@ -2,17 +2,23 @@ import 'package:flutter/foundation.dart';
 
 class AppConfig {
   static const String _productionApiBaseUrl =
-      'https://guidiannode-production.up.railway.app';
+      'https://guidiannode-api-production.up.railway.app';
   static const String _androidEmulatorApiBaseUrl = 'http://10.0.2.2:3000';
   static const String _loopbackApiBaseUrl = 'http://127.0.0.1:3000';
+
   static const String _apiBaseUrlOverride = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: String.fromEnvironment('VITE_API_BASE_URL', defaultValue: ''),
+    defaultValue: String.fromEnvironment(
+      'VITE_API_BASE_URL',
+      defaultValue: '',
+    ),
   );
+
   static const String _apiAuthBaseUrlOverride = String.fromEnvironment(
     'API_AUTH_BASE_URL',
     defaultValue: '',
   );
+
   static const String _googleMapsApiKey = String.fromEnvironment(
     'GOOGLE_MAPS_API_KEY',
     defaultValue: String.fromEnvironment(
@@ -20,10 +26,12 @@ class AppConfig {
       defaultValue: '',
     ),
   );
+
   static const String _supabaseUrl = String.fromEnvironment(
     'SUPABASE_URL',
     defaultValue: '',
   );
+
   static const String _supabaseAnonKey = String.fromEnvironment(
     'SUPABASE_ANON_KEY',
     defaultValue: String.fromEnvironment(
@@ -31,6 +39,7 @@ class AppConfig {
       defaultValue: '',
     ),
   );
+
   static const String _whatsappTargetNumber = String.fromEnvironment(
     'WHATSAPP_TARGET_NUMBER',
     defaultValue: String.fromEnvironment(
@@ -40,16 +49,19 @@ class AppConfig {
   );
 
   static String get apiBaseUrl {
-    if (kReleaseMode) {
-      return _productionApiBaseUrl;
-    }
-
+    // Environment configuration must be checked before the release fallback.
+    // This allows Vercel Preview and Production deployments to select the
+    // correct Railway backend without changing source code.
     if (_apiBaseUrlOverride.isNotEmpty) {
       return _normalizeBaseUrl(_apiBaseUrlOverride);
     }
 
     if (_apiAuthBaseUrlOverride.isNotEmpty) {
       return _deriveBaseUrlFromAuthUrl(_apiAuthBaseUrlOverride);
+    }
+
+    if (kReleaseMode) {
+      return _productionApiBaseUrl;
     }
 
     if (defaultTargetPlatform == TargetPlatform.android) {
@@ -60,25 +72,17 @@ class AppConfig {
   }
 
   static String get apiAuthBaseUrl {
-    if (kReleaseMode) {
-      return '$_productionApiBaseUrl/api/auth';
-    }
-
     if (_apiAuthBaseUrlOverride.isNotEmpty) {
       return _normalizeBaseUrl(_apiAuthBaseUrlOverride);
     }
-
     return '$apiBaseUrl/api/auth';
   }
 
   static Uri get dataDeletionUri => Uri.parse('$apiBaseUrl/data-deletion');
 
   static String get googleMapsApiKey => _googleMapsApiKey;
-
   static String get supabaseUrl => _supabaseUrl;
-
   static String get supabaseAnonKey => _supabaseAnonKey;
-
   static String get whatsappTargetNumber => _whatsappTargetNumber;
 
   static bool get hasSupabaseRealtimeConfig =>
