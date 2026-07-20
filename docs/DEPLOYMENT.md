@@ -113,7 +113,12 @@ server/sql/create_alert_confirmations.sql
 server/sql/create_moderation_actions.sql
 server/sql/create_alert_media.sql
 server/sql/enable_row_level_security.sql
+server/sql/add_password_authentication.sql
 ```
+
+`add_password_authentication.sql` adds nullable `email`/`password_hash`
+columns to `users`, enabling the alternate password-based sign-in described
+below alongside the existing WhatsApp flow.
 
 The migrations preserve old OTP columns and add nullable WhatsApp fields plus `users.phone_verified`.
 

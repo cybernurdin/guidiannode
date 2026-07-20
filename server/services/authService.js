@@ -5,7 +5,7 @@ const otpService = require('./otpService');
 const { createAppSession } = require('./sessionService');
 const userService = require('./userService');
 const whatsappVerificationService = require('./whatsappVerificationService');
-const { normalizePhoneNumber } = require('../utils/authUtils');
+const { normalizePhoneNumber, hashPassword, verifyPassword } = require('../utils/authUtils');
 
 const verificationCompletionPromises = new Map();
 const ACCOUNT_NOT_ALLOWED_STATUSES = new Set([
@@ -153,6 +153,7 @@ const buildSafeUserPayload = (user) => {
     'id',
     'full_name',
     'phone_number',
+    'email',
     'quarter',
     'location_permission',
     'latitude',
@@ -635,11 +636,141 @@ const confirmWhatsappClick = async ({
   return response;
 };
 
+// --- Password-based sign-in (demo/competition path, alongside WhatsApp) ---
+// Kept intentionally simple: no separate OTP/email-confirmation step. A
+// password is proof of ownership by itself, so this does not weaken
+// security the way phone-only login does.
+
+const loginWithPassword = async ({ identifier, password }) => {
+  const trimmedIdentifier = String(identifier ?? '').trim();
+  const looksLikeEmail = trimmedIdentifier.includes('@');
+
+  const user = looksLikeEmail
+    ? await userService.getUserByEmail(trimmedIdentifier)
+    : await userService.getUserByPhoneNumber(trimmedIdentifier);
+
+  if (!user || !user.password_hash) {
+    throw new AppError(
+      'No account with that phone number or email has a password set. Register with a password first.',
+      404,
+      'PASSWORD_ACCOUNT_NOT_FOUND'
+    );
+  }
+
+  assertAccountAllowed(user);
+
+  if (!verifyPassword(password, user.password_hash)) {
+    throw new AppError('Incorrect password.', 401, 'INVALID_PASSWORD');
+  }
+
+  const emergencyContact = await userService.getPrimaryEmergencyContact(user.id);
+
+  return buildAuthenticatedPayload(user, emergencyContact, 'Signed in successfully.');
+};
+
+const registerWithPassword = async ({
+  full_name,
+  phone_number,
+  email,
+  password,
+  quarter,
+  location_permission,
+  latitude,
+  longitude,
+}) => {
+  const normalizedPhone = normalizePhoneNumber(phone_number);
+  const [existingByPhone, existingByEmail] = await Promise.all([
+    userService.getUserByPhoneNumber(normalizedPhone),
+    email ? userService.getUserByEmail(email) : Promise.resolve(null),
+  ]);
+
+  if (existingByPhone) {
+    if (!existingByPhone.password_hash) {
+      const passwordHash = hashPassword(password);
+      const updatedUser = await userService.setUserPassword({
+        userId: existingByPhone.id,
+        passwordHash,
+      });
+      const emergencyContact = await userService.getPrimaryEmergencyContact(
+        existingByPhone.id
+      );
+      return buildAuthenticatedPayload(
+        updatedUser,
+        emergencyContact,
+        'Password set for your existing account. Signed in successfully.'
+      );
+    }
+
+    throw new AppError(
+      'This phone number is already registered. Please login instead.',
+      409,
+      'PHONE_ALREADY_EXISTS'
+    );
+  }
+
+  if (existingByEmail) {
+    throw new AppError(
+      'This email is already registered. Please login instead.',
+      409,
+      'EMAIL_ALREADY_EXISTS'
+    );
+  }
+
+  const passwordHash = hashPassword(password);
+  const authUser = await userService.ensureAuthUserForPhoneNumber({
+    phoneNumber: normalizedPhone,
+    fullName: full_name,
+  });
+
+  const newUser = await userService.createUserWithPassword({
+    id: authUser.id,
+    full_name,
+    phone_number: normalizedPhone,
+    email,
+    password_hash: passwordHash,
+    quarter,
+    location_permission,
+    latitude,
+    longitude,
+  });
+
+  return buildAuthenticatedPayload(
+    newUser,
+    null,
+    'Account created successfully.'
+  );
+};
+
+// Demo/competition-only shortcut: signs in with just a registered phone
+// number, no password or OTP. This intentionally trades verification for
+// speed -- do not enable this path for a real public deployment.
+const loginWithPhoneOnly = async ({ phone_number }) => {
+  const normalizedPhone = normalizePhoneNumber(phone_number);
+  const user = await userService.getUserByPhoneNumber(normalizedPhone);
+
+  if (!user) {
+    throw new AppError(
+      'This phone number is not registered. Please create an account first.',
+      404,
+      'PHONE_NOT_REGISTERED'
+    );
+  }
+
+  assertAccountAllowed(user);
+
+  const emergencyContact = await userService.getPrimaryEmergencyContact(user.id);
+
+  return buildAuthenticatedPayload(user, emergencyContact, 'Signed in successfully.');
+};
+
 module.exports = {
   completeVerifiedOtpSession,
   confirmWhatsappClick,
   getVerificationStatus,
   isVerificationCompletionInProgress,
+  loginWithPassword,
+  loginWithPhoneOnly,
+  registerWithPassword,
   resendOtp,
   startLoginOtp,
   startRegistrationOtp,

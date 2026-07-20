@@ -78,7 +78,48 @@ const resendOtpSchema = z.object({
   otp_session_id: z.string().trim().uuid().optional(),
 });
 
+const passwordSchema = z
+  .string()
+  .min(6, 'Password must be at least 6 characters long')
+  .max(200);
+
+const phoneOnlyLoginSchema = z.object({
+  phone_number: phoneNumberSchema,
+});
+
+const registerPasswordSchema = z
+  .object({
+    full_name: z.string().trim().min(2, 'Full name is required'),
+    phone_number: phoneNumberSchema,
+    email: z.string().trim().email('Enter a valid email').optional(),
+    password: passwordSchema,
+    quarter: z.string().trim().min(2, 'Quarter is required').optional().default(''),
+    location_permission: z.coerce.boolean().optional().default(false),
+    latitude: latitudeSchema.nullable().optional(),
+    longitude: longitudeSchema.nullable().optional(),
+  })
+  .superRefine((value, ctx) => {
+    const hasLatitude = value.latitude !== undefined && value.latitude !== null;
+    const hasLongitude = value.longitude !== undefined && value.longitude !== null;
+
+    if (hasLatitude !== hasLongitude) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Latitude and longitude must be supplied together',
+        path: hasLatitude ? ['longitude'] : ['latitude'],
+      });
+    }
+  });
+
+const loginPasswordSchema = z.object({
+  identifier: z.string().trim().min(3, 'Enter your phone number or email'),
+  password: passwordSchema,
+});
+
 module.exports = {
+  loginPasswordSchema,
+  phoneOnlyLoginSchema,
+  registerPasswordSchema,
   registrationSchema,
   requestOtpSchema,
   resendOtpSchema,
