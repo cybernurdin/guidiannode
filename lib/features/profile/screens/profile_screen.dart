@@ -590,7 +590,7 @@ class _ProfileHero extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            neighborhood.isEmpty ? 'Bamenda, Cameroon' : neighborhood,
+            neighborhood.isEmpty ? 'Cameroon' : neighborhood,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: AppColors.cleanWhite.withValues(alpha: 0.82),

@@ -135,7 +135,7 @@ class _SplashScreenState extends State<SplashScreen>
                           Flexible(
                             fit: FlexFit.loose,
                             child: Text(
-                              'Help is one tap away.\nStronger together,\nsafer Bamenda.',
+                              'Help is one tap away.\nStronger together,\nsafer Cameroon.',
                               textAlign: TextAlign.center,
                               maxLines: 3,
                               style: Theme.of(context).textTheme.titleMedium

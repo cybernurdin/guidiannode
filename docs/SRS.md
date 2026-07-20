@@ -21,7 +21,7 @@ PART 3
 # SOFTWARE REQUIREMENTS SPECIFICATION (SRS)
 
 **GuardianNode**
-Design and Implementation of an Emergency Alert Communication System for Bamenda
+Design and Implementation of an Emergency Alert Communication System for Cameroon
 **Version:** 1.0
 **Prepared For:** BTECH Project Implementation
 **Prepared By:** Development Team
@@ -35,7 +35,7 @@ Design and Implementation of an Emergency Alert Communication System for Bamenda
 ## 1. INTRODUCTION
 
 ### 1.1 Purpose of the Document
-This Software Requirements Specification (SRS) document describes the functional and non-functional requirements for GuardianNode, a mobile-based emergency alert communication system designed to improve emergency response time within communities in Bamenda.
+This Software Requirements Specification (SRS) document describes the functional and non-functional requirements for GuardianNode, a mobile-based emergency alert communication system designed to improve emergency response time within communities across Cameroon.
 The purpose of this document is to:
 * Define the system requirements for GuardianNode
 * Provide a reference for developers, project supervisors, and stakeholders
@@ -54,7 +54,7 @@ The system enables users to:
 * Notify emergency contacts and police authorities
 * Enable nearby residents to respond to emergencies
 
-The system aims to reduce emergency response time and strengthen community safety in Bamenda.
+The system aims to reduce emergency response time and strengthen community safety across Cameroon.
 GuardianNode will be implemented using:
 * Flutter mobile framework
 * Node.js backend services
@@ -152,7 +152,7 @@ The GuardianNode system provides the following core functions:
 ### 2.3 User Classes and Characteristics
 
 **1. Community Users (Residents)**
-* **Description:** Residents of Bamenda who install the mobile application.
+* **Description:** Residents across Cameroon who install the mobile application.
 * **Characteristics:** Basic smartphone users, limited technical knowledge, require simple and intuitive interfaces.
 * **Responsibilities:** Trigger alerts during emergencies, respond to nearby incidents when possible.
 
@@ -404,7 +404,7 @@ Non-functional requirements define system quality attributes.
 * **Alert Delivery Time:** Emergency notifications must be delivered within 3 seconds after alert creation.
 * **Location Detection Time:** GPS location retrieval should occur within 5 seconds after request.
 * **System Response Time:** The mobile application should respond to user actions within 1–2 seconds.
-* **Concurrent Users:** The system should support at least 5,000 simultaneous users in Bamenda.
+* **Concurrent Users:** The system should support at least 5,000 simultaneous users across Cameroon.
 
 ### 5.2 Reliability Requirements
 * **Reliability targets:** 99% system uptime, Automatic retry for failed notifications, SMS fallback in low connectivity areas.
@@ -427,7 +427,7 @@ The system must support future maintenance and upgrades.
 * **Implementation practices:** modular architecture, documented APIs, version control.
 
 ### 5.7 Scalability Requirements
-The system should be scalable to support additional cities beyond Bamenda.
+The system should be scalable to support continued growth across Cameroon and, in future, neighboring regions.
 * Supabase infrastructure allows scaling through managed database clusters, cloud storage, distributed API endpoints.
 
 ***
@@ -487,7 +487,7 @@ Future improvements may include:
 ***
 
 # FINAL SRS SUMMARY
-The GuardianNode system provides a community-driven emergency alert platform designed to improve safety in Bamenda.
+The GuardianNode system provides a community-driven emergency alert platform designed to improve safety across Cameroon.
 Key capabilities include:
 * Instant SOS alerting
 * Geo-fenced emergency broadcasting

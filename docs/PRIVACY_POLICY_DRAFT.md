@@ -2,7 +2,7 @@
 
 This draft is a starting point for legal review before Play Store submission.
 
-GuardianNode helps Bamenda residents send emergency alerts, share emergency location context, and notify trusted contacts or nearby responders.
+GuardianNode helps residents across Cameroon send emergency alerts, share emergency location context, and notify trusted contacts or nearby responders.
 
 ## Information We Collect
 

@@ -208,7 +208,7 @@ class DashboardHomeTab extends StatelessWidget {
                       child: StatTile(
                         label: 'Nearby alerts',
                         value: '${nearbyAlerts.length}',
-                        helper: 'Around Bamenda',
+                        helper: 'Around you',
                         tone: nearbyAlerts.isEmpty
                             ? StatusTone.info
                             : StatusTone.error,
@@ -267,7 +267,7 @@ class DashboardHomeTab extends StatelessWidget {
                       ),
                 const SizedBox(height: AppSpacing.xl),
                 const SafeZoneCard(
-                  locationName: 'Regional Hospital Bamenda',
+                  locationName: 'Nearest Regional Hospital',
                   distance: '2.4 km',
                 ),
               ],
@@ -370,7 +370,7 @@ class _HomeHeader extends StatelessWidget {
                     Expanded(
                       child: Text(
                         activeAlert == null
-                            ? "Bamenda, We've Got You."
+                            ? "Cameroon, We've Got You."
                             : 'Emergency session is live.',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: AppColors.cleanWhite,

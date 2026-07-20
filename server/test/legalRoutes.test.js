@@ -54,7 +54,7 @@ test('privacy policy is public HTML with required disclosures', () => {
   assert.match(response.body, /WhatsApp Cloud API and Meta/);
   assert.match(response.body, /verification token/i);
   assert.match(response.body, /emergency alert/i);
-  assert.match(response.body, /Bamenda, Cameroon/);
+  assert.match(response.body, /across Cameroon/);
   assert.match(response.body, /https:\/\/wa\.me\/237657262038/);
   assert.match(response.body, /June 6, 2026/);
 });

@@ -59,7 +59,7 @@ void main() {
 
     await tester.tap(find.text('About GuardianNode').last);
     await tester.pumpAndSettle();
-    expect(find.textContaining('Bamenda emergency alert app'), findsWidgets);
+    expect(find.textContaining('Cameroon emergency alert app'), findsWidgets);
     await tester.pageBack();
     await tester.pumpAndSettle();
 

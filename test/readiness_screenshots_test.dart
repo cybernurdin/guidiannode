@@ -125,7 +125,7 @@ class _OpeningPreview extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                'Help is one tap away.\nStronger together,\nsafer Bamenda.',
+                'Help is one tap away.\nStronger together,\nsafer Cameroon.',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: AppColors.cleanWhite,
@@ -278,7 +278,7 @@ class _HomeHeaderPreview extends StatelessWidget {
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Text(
-                        "Bamenda, We've Got You.",
+                        "Cameroon, We've Got You.",
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: AppColors.cleanWhite,
                           fontWeight: FontWeight.w800,
@@ -560,7 +560,7 @@ class _SettingsListPreview extends StatelessWidget {
         const _SettingsPreviewTile(
           marker: 'i',
           title: 'About GuardianNode',
-          subtitle: 'Bamenda emergency alert app.',
+          subtitle: 'Cameroon emergency alert app.',
         ),
       ],
     );

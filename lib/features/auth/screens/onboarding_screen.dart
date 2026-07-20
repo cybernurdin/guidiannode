@@ -42,7 +42,7 @@ class OnboardingScreen extends StatelessWidget {
             const Center(child: GuardianLogo(size: 88)),
             const SizedBox(height: AppSpacing.xl),
             Text(
-              "We've got your back,\nBamenda.",
+              "We've got your back,\nCameroon.",
               style: Theme.of(context).textTheme.displayMedium?.copyWith(
                 color: AppColors.trustBlue,
                 fontWeight: FontWeight.w900,

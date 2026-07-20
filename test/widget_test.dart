@@ -18,7 +18,7 @@ void main() {
 
     expect(find.text('GuardianNode'), findsOneWidget);
     expect(
-      find.text('Help is one tap away.\nStronger together,\nsafer Bamenda.'),
+      find.text('Help is one tap away.\nStronger together,\nsafer Cameroon.'),
       findsOneWidget,
     );
 

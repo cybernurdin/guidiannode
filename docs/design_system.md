@@ -7,7 +7,7 @@
 ## 4.5 User Interface and User Experience (UI/UX) Design Requirements
 The user interface of the GuardianNode mobile application must prioritize clarity, rapid emergency interaction, accessibility, and trust. Since the application will be used during high-stress emergency situations, the design must minimize cognitive load while maintaining strong visual cues for safety and community engagement.
 
-The UI/UX design strategy integrates safety psychology, visual hierarchy, and accessibility principles to ensure that residents of Bamenda can interact with the system quickly and confidently.
+The UI/UX design strategy integrates safety psychology, visual hierarchy, and accessibility principles to ensure that residents across Cameroon can interact with the system quickly and confidently.
 
 ***
 
@@ -183,7 +183,7 @@ The system must provide immediate visual feedback after user actions. These sign
 ***
 
 ### 4.5.7 Cultural Context Considerations
-Since the application targets residents of Bamenda, the UI design must consider local context.
+Since the application targets residents across Cameroon, the UI design must consider local context.
 
 **Important factors include:**
 * Users with limited smartphone experience

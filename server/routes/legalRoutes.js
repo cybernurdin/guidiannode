@@ -124,7 +124,7 @@ const privacyPolicyPage = renderPage({
     <section>
       <h2>1. About Guardian Node</h2>
       <p>Guardian Node is a safety and emergency communication application. It helps users create and verify an account, communicate important safety information, send emergency alerts, and coordinate assistance where those features are available.</p>
-      <p>Guardian Node is operated for users in Bamenda, Cameroon.</p>
+      <p>Guardian Node is operated for users across Cameroon.</p>
       <p>This policy applies to the Guardian Node mobile application, its backend services, and the public website pages operated for the application.</p>
     </section>
 

@@ -1,6 +1,6 @@
 # GuardianNode
 
-GuardianNode is a Flutter and Node.js emergency-response app for Bamenda. It provides inbound WhatsApp authentication, SOS alerts, realtime location sharing, nearby incidents, responder guidance, and Supabase-backed updates.
+GuardianNode is a Flutter and Node.js emergency-response app for Cameroon. It provides inbound WhatsApp authentication, SOS alerts, realtime location sharing, nearby incidents, responder guidance, and Supabase-backed updates.
 
 ## Local Development
 

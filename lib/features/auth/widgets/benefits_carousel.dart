@@ -46,7 +46,7 @@ class _BenefitsCarouselState extends State<BenefitsCarousel> {
     const BenefitSlideData(
       title: 'Community Protection Network',
       description:
-          'Connect with nearby users and responders in Bamenda for faster help.',
+          'Connect with nearby users and responders across Cameroon for faster help.',
       icon: Icons.handshake_rounded,
       iconColor: AppColors.trustBlue,
     ),
