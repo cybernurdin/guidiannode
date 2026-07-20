@@ -30,6 +30,19 @@ const LIVE_LOCATION_DISTANCE_THRESHOLD_METERS = 15;
 const LIVE_LOCATION_MIN_INTERVAL_MS = 5000;
 const ADDRESS_REFRESH_DISTANCE_METERS = 60;
 
+// alerts.classification_source is NOT NULL DEFAULT 'user'. An explicit null
+// in an insert payload overrides that column default and violates the
+// constraint, so this must never resolve to null/undefined -- 'user' is the
+// correct fallback for the plain quick-SOS path, which never supplies any
+// classification data at all.
+const resolveClassificationSource = ({ confirmedCategory, suggestedCategory, classificationSource }) => {
+  if (confirmedCategory && suggestedCategory && confirmedCategory !== suggestedCategory) {
+    return 'user';
+  }
+
+  return classificationSource ?? 'user';
+};
+
 const toNullableNumber = (value) => {
   if (value === null || value === undefined || value === '') {
     return null;
@@ -260,11 +273,11 @@ const createSosAlert = async ({
   const finalCategory =
     confirmedCategory ?? suggestedCategory ?? LEGACY_EMERGENCY_TYPE_TO_CATEGORY[emergencyType] ?? null;
   const isSensitiveCategory = finalCategory ? SENSITIVE_CATEGORIES.includes(finalCategory) : false;
-  // A user cannot claim credit for an AI/rules suggestion they then edited.
-  const normalizedClassificationSource =
-    confirmedCategory && suggestedCategory && confirmedCategory !== suggestedCategory
-      ? 'user'
-      : classificationSource ?? (confirmedCategory ? 'user' : null);
+  const normalizedClassificationSource = resolveClassificationSource({
+    confirmedCategory,
+    suggestedCategory,
+    classificationSource,
+  });
   const finalUrgency = immediateDanger ? URGENCY_LEVEL.CRITICAL : urgencyLevel ?? null;
 
   const alert = await insertAlert({
@@ -813,4 +826,5 @@ module.exports = {
   respondToAlert,
   resolveAlert,
   upsertLiveAlertLocation,
+  resolveClassificationSource,
 };
