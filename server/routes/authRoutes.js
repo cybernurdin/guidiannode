@@ -3,6 +3,9 @@ const authController = require('../controllers/authController');
 const { verificationStartLimiter } = require('../middleware/rateLimits');
 const { validateRequest } = require('../middleware/validateRequest');
 const {
+  loginPasswordSchema,
+  phoneOnlyLoginSchema,
+  registerPasswordSchema,
   registrationSchema,
   requestOtpSchema,
   resendOtpSchema,
@@ -49,6 +52,29 @@ router.post(
   '/resend-otp',
   validateRequest(resendOtpSchema),
   authController.resendOtpHandler
+);
+
+// Demo/competition-only shortcut: no password, no OTP -- just a registered
+// phone number. Heavily rate-limited; not suitable for a real deployment.
+router.post(
+  '/login/phone-only',
+  verificationStartLimiter,
+  validateRequest(phoneOnlyLoginSchema),
+  authController.loginPhoneOnlyHandler
+);
+
+router.post(
+  '/register/password',
+  verificationStartLimiter,
+  validateRequest(registerPasswordSchema),
+  authController.registerPasswordHandler
+);
+
+router.post(
+  '/login/password',
+  verificationStartLimiter,
+  validateRequest(loginPasswordSchema),
+  authController.loginPasswordHandler
 );
 
 module.exports = router;

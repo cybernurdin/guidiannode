@@ -59,6 +59,41 @@ class ApiService {
     );
   }
 
+  /// Demo/competition-only shortcut: signs in with just a registered phone
+  /// number, no password or OTP required.
+  static Future<Map<String, dynamic>> loginPhoneOnly(String phoneNumber) async {
+    return _post('/login/phone-only', body: {'phone_number': phoneNumber});
+  }
+
+  static Future<Map<String, dynamic>> registerWithPassword({
+    required String fullName,
+    required String phoneNumber,
+    required String password,
+    String? email,
+    String? quarter,
+  }) async {
+    return _post(
+      '/register/password',
+      body: {
+        'full_name': fullName,
+        'phone_number': phoneNumber,
+        'password': password,
+        if (email != null && email.isNotEmpty) 'email': email,
+        if (quarter != null && quarter.isNotEmpty) 'quarter': quarter,
+      },
+    );
+  }
+
+  static Future<Map<String, dynamic>> loginWithPassword({
+    required String identifier,
+    required String password,
+  }) async {
+    return _post(
+      '/login/password',
+      body: {'identifier': identifier, 'password': password},
+    );
+  }
+
   static Future<Map<String, dynamic>> resendOtp({
     required String phoneNumber,
     String? otpSessionId,

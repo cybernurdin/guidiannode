@@ -97,6 +97,66 @@ const getUserByPhoneNumber = async (phoneNumber) => {
   );
 };
 
+const getUserByEmail = async (email) => {
+  const normalizedEmail = String(email ?? '').trim().toLowerCase();
+
+  if (!normalizedEmail) {
+    return null;
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from(USERS_TABLE)
+    .select('*')
+    .ilike('email', normalizedEmail)
+    .limit(1);
+
+  if (error) {
+    throw wrapDatabaseError(error, USERS_TABLE);
+  }
+
+  return data?.[0] ?? null;
+};
+
+const createUserWithPassword = async ({
+  id,
+  full_name,
+  phone_number,
+  email,
+  password_hash,
+  quarter,
+  location_permission,
+  latitude,
+  longitude,
+}) =>
+  insertWithCreatedAtFallback(USERS_TABLE, {
+    id,
+    full_name,
+    phone_number: normalizePhoneNumber(phone_number),
+    email: email ? String(email).trim().toLowerCase() : null,
+    password_hash,
+    quarter: quarter ?? null,
+    location_permission: Boolean(location_permission),
+    latitude: location_permission ? latitude ?? null : null,
+    longitude: location_permission ? longitude ?? null : null,
+    phone_verified: false,
+    created_at: nowIso(),
+  });
+
+const setUserPassword = async ({ userId, passwordHash }) => {
+  const { data, error } = await supabaseAdmin
+    .from(USERS_TABLE)
+    .update({ password_hash: passwordHash })
+    .eq('id', userId)
+    .select()
+    .single();
+
+  if (error) {
+    throw wrapDatabaseError(error, USERS_TABLE);
+  }
+
+  return data;
+};
+
 const listAuthUsersPage = async (page) => {
   const { data, error } = await supabaseAdmin.auth.admin.listUsers({
     page,
@@ -420,10 +480,12 @@ const updateUserProfile = async ({
 };
 
 module.exports = {
+  createUserWithPassword,
   ensureAuthUserForPhoneNumber,
   findAuthUserByPhoneNumber,
   getPrimaryEmergencyContact,
   getUserById,
+  getUserByEmail,
   getUserProfile,
   getUserByPhoneNumber,
   markUserPhoneVerified,
@@ -431,5 +493,6 @@ module.exports = {
   saveNewEmergencyContact,
   saveNewVerifiedUserProfile,
   saveUserProfile,
+  setUserPassword,
   updateUserProfile,
 };

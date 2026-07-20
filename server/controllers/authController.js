@@ -68,10 +68,46 @@ const resendOtpHandler = async (req, res) => {
   }
 };
 
+const loginPhoneOnlyHandler = async (req, res) => {
+  try {
+    const response = await authService.loginWithPhoneOnly(
+      req.validatedBody ?? req.body
+    );
+    return res.status(200).json(response);
+  } catch (error) {
+    return handleErrorResponse(res, error, 'Phone-Only Login Error');
+  }
+};
+
+const registerPasswordHandler = async (req, res) => {
+  try {
+    const response = await authService.registerWithPassword(
+      req.validatedBody ?? req.body
+    );
+    return res.status(201).json(response);
+  } catch (error) {
+    return handleErrorResponse(res, error, 'Password Registration Error');
+  }
+};
+
+const loginPasswordHandler = async (req, res) => {
+  try {
+    const response = await authService.loginWithPassword(
+      req.validatedBody ?? req.body
+    );
+    return res.status(200).json(response);
+  } catch (error) {
+    return handleErrorResponse(res, error, 'Password Login Error');
+  }
+};
+
 module.exports = {
   requestOtpHandler,
   resendOtpHandler,
   verifyOtpHandler,
   registerHandler,
   startRegistrationVerificationHandler,
+  loginPhoneOnlyHandler,
+  registerPasswordHandler,
+  loginPasswordHandler,
 };
