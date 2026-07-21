@@ -2,8 +2,38 @@
 
 import 'dart:async';
 import 'dart:html' as html;
+import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
 
 Future<void>? _loadingFuture;
+bool _authFailureHookInstalled = false;
+String? _authFailureMessage;
+
+// Google calls window.gm_authFailure when the Maps JavaScript API rejects a
+// request (invalid key, wrong HTTP referrer allow-list, API not enabled on
+// the project, billing disabled, etc). Without this hook, google.maps still
+// ends up partially defined, so our readiness poll below sees `google.maps`
+// exist and reports "loaded" -- then the actual map widget crashes deep
+// inside Google's minified JS with a cryptic "window.<random> is not a
+// function" error. Capturing this callback turns that into an actionable
+// message instead.
+void _onAuthFailure() {
+  _authFailureMessage =
+      'Google Maps rejected this website\'s API key (RefererNotAllowedMapError / '
+      'ApiNotActivatedMapError / billing disabled). In Google Cloud Console, '
+      'check that this key: (1) has "Maps JavaScript API" enabled, (2) has '
+      '"HTTP referrers" application restrictions that include this domain '
+      '(not an Android-app-only restriction), and (3) belongs to a project '
+      'with billing enabled.';
+}
+
+void _installAuthFailureHook() {
+  if (_authFailureHookInstalled) {
+    return;
+  }
+  _authFailureHookInstalled = true;
+  globalContext.setProperty('gm_authFailure'.toJS, _onAuthFailure.toJS);
+}
 
 String _resolveApiKey(String apiKey) {
   if (apiKey.trim().isNotEmpty) {
@@ -41,6 +71,8 @@ Future<void> ensureGoogleMapsLoaded(String apiKey) {
     return _loadingFuture!;
   }
 
+  _installAuthFailureHook();
+
   final completer = Completer<void>();
   _loadingFuture = completer.future;
 
@@ -60,6 +92,12 @@ Future<void> ensureGoogleMapsLoaded(String apiKey) {
 
   late Timer poller;
   poller = Timer.periodic(const Duration(milliseconds: 100), (timer) {
+    if (_authFailureMessage != null) {
+      poller.cancel();
+      completer.completeError(StateError(_authFailureMessage!));
+      return;
+    }
+
     if (_isGoogleMapsReady) {
       poller.cancel();
       completer.complete();
